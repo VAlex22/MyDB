@@ -1,10 +1,17 @@
 #include "Partition.h"
 
-bool text::operator==(const text &a) const {
+bool Text::operator==(const Text &a) const
+{
     return (memcmp(a.x, x, TEXT_SIZE) == 0);
 }
 
-std::ostream& operator<< (std::ostream &o, const text& t)
+template <typename Archive>
+void Text::serialize(Archive& ar, const unsigned int version)
+{
+    ar & x;
+}
+
+std::ostream& operator<< (std::ostream &o, const Text& t)
 {
     for (int i = 0; i < TEXT_SIZE; i++)
         o << t.x[i];
@@ -27,6 +34,18 @@ Partition<t, s>::Partition(unsigned size, unordered_map<string, unsigned> fieldI
 {
     rowSize = sizeof(array<t, s>);
     rowsByKey.reserve(size/rowSize);
+}
+
+template <typename t, size_t s>
+Partition<t, s>::Partition(string file) {
+    ifstream f(file);
+    boost::archive::binary_iarchive archive(f);
+    archive>>rowsByKey;
+    archive>>fieldIndexes;
+    archive>>size;
+    archive>>used;
+    archive>>rowSize;
+    f.close();
 }
 
 template <typename t, size_t s>
@@ -122,7 +141,21 @@ array<t, s> Partition<t, s>::read(string key) {
     }
 }
 
-template class Partition<text, 10>;
+template <typename t, size_t s>
+bool Partition<t, s>::serialize(string file) {
+    ofstream f(file);
+    boost::archive::binary_oarchive archive(f);
+    archive<<rowsByKey;
+    archive<<fieldIndexes;
+    archive<<size;
+    archive<<used;
+    archive<<rowSize;
+    f.close();
+
+    return true;
+}
+
+template class Partition<Text, 10>;
 template class Partition<long, 1>;
 
 

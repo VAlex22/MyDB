@@ -16,7 +16,7 @@ protected:
     // You can do set-up work for each test here.
     PartitionTest();
 
-    text generateText();
+    Text generateText();
 
     long generateLong();
 
@@ -24,9 +24,9 @@ protected:
 
     unsigned partitionSize = 1024;
 
-    Partition<text, NUMBER_OF_FIELDS1> p1 = Partition<text, NUMBER_OF_FIELDS1>(partitionSize);
+    Partition<Text, NUMBER_OF_FIELDS1> p1 = Partition<Text, NUMBER_OF_FIELDS1>(partitionSize);
     Partition<long, NUMBER_OF_FIELDS2> p2 = Partition<long, NUMBER_OF_FIELDS2>(partitionSize);
-    unordered_map<string, array<text, 10>> data1;
+    unordered_map<string, array<Text, 10>> data1;
     unordered_map<string, array<long, 1>> data2;
 };
 

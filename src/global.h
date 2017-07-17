@@ -7,7 +7,14 @@
 #include <set>
 #include <ctime>
 #include <iostream>
+#include <fstream>
 #include <cstring>
+
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/unordered_map.hpp>
+
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
 
 #define TEXT_SIZE 10
 
