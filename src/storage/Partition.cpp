@@ -24,7 +24,8 @@ Partition<t, s>::Partition(unsigned size) : size(size), used(0) {
     rowsByKey.reserve(size / rowSize);
     for (unsigned i = 0; i < s; i++)
     {
-        fieldIndexes.insert({"field"+to_string(i),i});
+        fieldIndexes.insert({"f"+to_string(i),i});
+        indexFields.insert({i,"f"+to_string(i)});
     }
 }
 
@@ -34,6 +35,9 @@ Partition<t, s>::Partition(unsigned size, unordered_map<string, unsigned> fieldI
 {
     rowSize = sizeof(array<t, s>);
     rowsByKey.reserve(size/rowSize);
+    for (auto field : fieldIndexes) {
+        indexFields.insert({field.second, field.first});
+    }
 }
 
 template <typename t, size_t s>
@@ -42,6 +46,7 @@ Partition<t, s>::Partition(string file) {
     boost::archive::binary_iarchive archive(f);
     archive>>rowsByKey;
     archive>>fieldIndexes;
+    archive>>indexFields;
     archive>>size;
     archive>>used;
     archive>>rowSize;
@@ -147,6 +152,7 @@ bool Partition<t, s>::serialize(string file) {
     boost::archive::binary_oarchive archive(f);
     archive<<rowsByKey;
     archive<<fieldIndexes;
+    archive<<indexFields;
     archive<<size;
     archive<<used;
     archive<<rowSize;
@@ -155,6 +161,7 @@ bool Partition<t, s>::serialize(string file) {
     return true;
 }
 
+template class Partition<Text, 4>;
 template class Partition<Text, 10>;
 template class Partition<long, 1>;
 

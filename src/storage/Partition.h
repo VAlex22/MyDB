@@ -4,7 +4,7 @@
 
 struct Text
 {
-    char x[TEXT_SIZE];
+    char x[TEXT_SIZE+1];
     bool operator== (const Text& a) const;
 
     template <typename Archive>
@@ -18,10 +18,11 @@ private:
     unsigned size; // size of values in partition
     unsigned used; // used size
     unsigned rowSize; // size of one row
-    unordered_map<string, unsigned> fieldIndexes;
     unordered_map<string, array<t,s>> rowsByKey;
 
 public:
+    unordered_map<string, unsigned> fieldIndexes;
+    unordered_map<unsigned, string> indexFields;
     Partition(string file);
     Partition(unsigned size);
     Partition(unsigned size, unordered_map<string, unsigned> fieldIndexes);
