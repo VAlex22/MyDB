@@ -14,11 +14,11 @@ template <typename t, size_t s>
 class Server
 {
 public:
-    Server(boost::asio::io_service &io_service, const std::string &file, Partition<t, s> *p);
+    Server(boost::asio::io_service &io_service, const std::string &file, WorkerThread<t, s> *w);
     void handle_accept(session_ptr<t, s> new_session, const boost::system::error_code& error);
 
 private:
-    Partition<t, s> *p;
+    WorkerThread<t, s> *w;
     boost::asio::io_service& io_service_;
     stream_protocol::acceptor acceptor_;
 };

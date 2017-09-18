@@ -10,12 +10,21 @@
 #include <fstream>
 #include <cstring>
 #include <cstdio>
+#include <thread>
+#include <queue>
+#include <mutex>
+#include <atomic>
+#include <condition_variable>
+
 
 #include <boost/array.hpp>
 #include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/asio.hpp>
+#include <boost/function.hpp>
+#include <boost/thread/mutex.hpp>
+
 
 #include <boost/serialization/serialization.hpp>
 #include <boost/serialization/unordered_map.hpp>
@@ -23,7 +32,19 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 
-#define TEXT_SIZE 3
+#define TEXT_SIZE               3
+
+#define MSG_EXIT_THREAD			1
+#define MSG_DELETE		        2
+#define MSG_INSERT_TEXT         3
+#define MSG_UPDATE_TEXT         4
+#define MSG_READ_FULL_TEXT      5
+#define MSG_READ_PARTIAL_TEXT   6
+#define MSG_INSERT_LONG         7
+#define MSG_UPDATE_LONG         8
+#define MSG_READ_LONG           9
+
+
 
 using boost::asio::local::stream_protocol;
 using namespace std;

@@ -1,7 +1,9 @@
 #include "Session.h"
 
+void yield(){}
+
 template <size_t s>
-Session<Text, s>::Session(boost::asio::io_service& io_service, Partition<Text, s> *p) : socket_(io_service), p(p)
+Session<Text, s>::Session(boost::asio::io_service& io_service, WorkerThread<Text, s> *w) : socket_(io_service), w(w)
 {
     cout<<"New Session"<<endl;
 }
@@ -27,7 +29,7 @@ void Session<Text, s>::start()
 }
 
 template <size_t s>
-Session<long, s>::Session(boost::asio::io_service& io_service, Partition<long, s> *p) : socket_(io_service), p(p)
+Session<long, s>::Session(boost::asio::io_service& io_service, WorkerThread<long, s> *w) : socket_(io_service), w(w)
 {
     cout<<"New Session"<<endl;
 }
@@ -96,7 +98,19 @@ void Session<Text, s>::handle_read(const boost::system::error_code& error, size_
         try {
             switch (request.type()) {
                 case mydb::Request_REQUEST_TYPE_DELETE : {
-                    bool status = p->remove(request.key());
+                    WorkerRequest *wr = new WorkerRequest(MSG_DELETE, &request.key(), nullptr);
+                    unique_lock<mutex> lock(wr->m);
+                    w->PostMsg(wr);
+
+                    //wr->cv.wait(lock);
+                    while(!wr->responseReady)
+                    {
+                        yield_timer.expires_from_now(boost::posix_time::seconds(1));
+                        yield_timer.async_wait(&yield);
+                    }
+                    bool status = (bool) wr->response;
+                    delete wr;
+                    //bool status = p->remove(request.key());
                     mydb::Response response;
                     response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
                     response.set_isstatusok(status);
@@ -120,10 +134,20 @@ void Session<Text, s>::handle_read(const boost::system::error_code& error, size_
                         for (auto i = m.begin(); i != m.end(); ++i) {
                             Text text = Text();
                             strcpy(text.x, i->second.c_str());
-                            ar[p->fieldIndexes[i->first]] = text;
+                            ar[w->p.fieldIndexes[i->first]] = text;
                         }
-
-                        bool status = p->insert(request.key(), ar);
+                        WorkerRequest *wr = new WorkerRequest(MSG_INSERT_TEXT, &request.key(), &ar);
+                        unique_lock<mutex> lock(wr->m);
+                        w->PostMsg(wr);
+                        //wr->cv.wait(lock);
+                        while(!wr->responseReady)
+                        {
+                            yield_timer.expires_from_now(boost::posix_time::seconds(1));
+                            yield_timer.async_wait(&yield);
+                        }
+                        bool status = (bool) wr->response;
+                        delete wr;
+                        //bool status = p->insert(request.key(), ar);
                         mydb::Response response;
                         response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
                         response.set_isstatusok(status);
@@ -142,20 +166,43 @@ void Session<Text, s>::handle_read(const boost::system::error_code& error, size_
 
                 case mydb::Request_REQUEST_TYPE_READ_TEXT : {
                     const google::protobuf::RepeatedPtrField<string> &fields = request.fields();
+
                     mydb::Response response;
                     response.set_type(mydb::Response_RESPONSE_TYPE_READ_TEXT);
                     if (fields.empty()) {
-                        array<Text, s> ar = p->read(request.key());
+                        WorkerRequest *wr = new WorkerRequest(MSG_READ_FULL_TEXT, &request.key(), nullptr);
+                        unique_lock<mutex> lock(wr->m);
+                        w->PostMsg(wr);
+                        //wr->cv.wait(lock);
+                        while(!wr->responseReady)
+                        {
+                            yield_timer.expires_from_now(boost::posix_time::seconds(1));
+                            yield_timer.async_wait(&yield);
+                        }
+                        array<Text, s> *ar = static_cast<array<Text, s>*>(wr->response);
+                        delete wr;
+                        //array<Text, s> ar = p->read(request.key());
                         for (int i = 0; i < s; i++) {
-                            response.mutable_text_result()->insert({p->indexFields[i], string(ar[i].x)});
+                            response.mutable_text_result()->insert({w->p.indexFields[i], string((*ar)[i].x)});
                         }
                     } else {
                         vector<string> v;
                         for (auto i : fields) {
                             v.push_back(i);
                         }
-                        unordered_map<string, Text> res = p->read(request.key(), v);
-                        for (auto r : res) {
+                        WorkerRequest *wr = new WorkerRequest(MSG_READ_PARTIAL_TEXT, &request.key(), &v);
+                        unique_lock<mutex> lock(wr->m);
+                        w->PostMsg(wr);
+                        //wr->cv.wait(lock);
+                        while(!wr->responseReady)
+                        {
+                            yield_timer.expires_from_now(boost::posix_time::seconds(1));
+                            yield_timer.async_wait(&yield);
+                        }
+                        unordered_map<string, Text> *res = static_cast<unordered_map<string, Text>*>(wr->response);
+                        delete wr;
+                        //unordered_map<string, Text> res = p->read(request.key(), v);
+                        for (auto r : *res) {
                             response.mutable_text_result()->insert({r.first, string(r.second.x)});
                         }
                     }
@@ -185,7 +232,18 @@ void Session<Text, s>::handle_read(const boost::system::error_code& error, size_
                         newData.insert({it.first, text});
                     }
 
-                    bool status = p->update(request.key(), newData);
+                    WorkerRequest *wr = new WorkerRequest(MSG_UPDATE_TEXT, &request.key(), &newData);
+                    unique_lock<mutex> lock(wr->m);
+                    w->PostMsg(wr);
+                    //wr->cv.wait(lock);
+                    while(!wr->responseReady)
+                    {
+                        yield_timer.expires_from_now(boost::posix_time::seconds(1));
+                        yield_timer.async_wait(&yield);
+                    }
+                    bool status = (bool) wr->response;
+                    delete wr;
+                    //bool status = p->update(request.key(), newData);
                     response.set_isstatusok(status);
 
                     int size = response.ByteSize();
@@ -249,7 +307,18 @@ void Session<long, s>::handle_read(const boost::system::error_code& error, size_
         try {
             switch (request.type()) {
                 case mydb::Request_REQUEST_TYPE_DELETE : {
-                    bool status = p->remove(request.key());
+                    WorkerRequest *wr = new WorkerRequest(MSG_DELETE, &request.key(), nullptr);
+                    unique_lock<mutex> lock(wr->m);
+                    w->PostMsg(wr);
+                    //wr->cv.wait(lock);
+                    while(!wr->responseReady)
+                    {
+                        yield_timer.expires_from_now(boost::posix_time::seconds(1));
+                        yield_timer.async_wait(&yield);
+                    }
+                    bool status = (bool) wr->response;
+                    delete wr;
+                    //bool status = p->remove(request.key());
                     mydb::Response response;
                     response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
                     response.set_isstatusok(status);
@@ -272,7 +341,18 @@ void Session<long, s>::handle_read(const boost::system::error_code& error, size_
 
                     ar[0] = request.long_row();
 
-                    bool status = p->insert(request.key(), ar);
+                    WorkerRequest *wr = new WorkerRequest(MSG_DELETE, &request.key(), &ar);
+                    unique_lock<mutex> lock(wr->m);
+                    w->PostMsg(wr);
+                    //wr->cv.wait(lock);
+                    while(!wr->responseReady)
+                    {
+                        yield_timer.expires_from_now(boost::posix_time::seconds(1));
+                        yield_timer.async_wait(&yield);
+                    }
+                    bool status = (bool) wr->response;
+                    delete wr;
+                    //bool status = p->insert(request.key(), ar);
                     mydb::Response response;
 
                     response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
@@ -293,8 +373,19 @@ void Session<long, s>::handle_read(const boost::system::error_code& error, size_
                 case mydb::Request_REQUEST_TYPE_READ_LONG : {
                     mydb::Response response;
                     response.set_type(mydb::Response_RESPONSE_TYPE_READ_LONG);
-                    array<long, s> ar = p->read(request.key());
-                    response.set_long_result(ar[0]);
+                    WorkerRequest *wr = new WorkerRequest(MSG_READ_LONG, &request.key(), nullptr);
+                    unique_lock<mutex> lock(wr->m);
+                    w->PostMsg(wr);
+                    //wr->cv.wait(lock);
+                    while(!wr->responseReady)
+                    {
+                        yield_timer.expires_from_now(boost::posix_time::seconds(1));
+                        yield_timer.async_wait(&yield);
+                    }
+                    array<long, s> *ar = static_cast<array<long, s>*>(wr->response);
+                    delete wr;
+                    //array<long, s> ar = p->read(request.key());
+                    response.set_long_result((*ar)[0]);
 
                     int size = response.ByteSize();
                     cout << size << endl;
@@ -316,7 +407,18 @@ void Session<long, s>::handle_read(const boost::system::error_code& error, size_
 
                     newData.insert({request.long_field(), request.long_row()});
 
-                    bool status = p->update(request.key(), newData);
+                    WorkerRequest *wr = new WorkerRequest(MSG_UPDATE_LONG, &request.key(), &newData);
+                    unique_lock<mutex> lock(wr->m);
+                    w->PostMsg(wr);
+                    //wr->cv.wait(lock);
+                    while(!wr->responseReady)
+                    {
+                        yield_timer.expires_from_now(boost::posix_time::seconds(1));
+                        yield_timer.async_wait(&yield);
+                    }
+                    bool status = (bool) wr->response;
+                    delete wr;
+                    //bool status = p->update(request.key(), newData);
                     response.set_isstatusok(status);
 
                     int size = response.ByteSize();

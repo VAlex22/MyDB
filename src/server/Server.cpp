@@ -1,13 +1,13 @@
 #include "Server.h"
 
 template <typename t, size_t s>
-Server<t, s>::Server(boost::asio::io_service &io_service, const std::string &file, Partition<t, s> *p)
+Server<t, s>::Server(boost::asio::io_service &io_service, const std::string &file, WorkerThread<t, s> *w)
     :
         io_service_(io_service),
         acceptor_(io_service, stream_protocol::endpoint(file)),
-        p(p)
+        w(w)
 {
-    session_ptr<t, s> new_session(new Session<t, s>(io_service_, p));
+    session_ptr<t, s> new_session(new Session<t, s>(io_service_, w));
 
     acceptor_.async_accept(
             new_session->socket(),
@@ -29,7 +29,7 @@ void Server<t, s>::handle_accept(session_ptr<t, s> new_session, const boost::sys
         new_session->start();
     }
 
-    new_session.reset(new Session<t, s>(io_service_, p));
+    new_session.reset(new Session<t, s>(io_service_, w));
 
     acceptor_.async_accept(
             new_session->socket(),
