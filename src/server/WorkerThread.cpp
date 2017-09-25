@@ -118,7 +118,7 @@ void WorkerThread<Text, s>::Process()
             case MSG_DELETE:
             {
 
-                bool status = p.remove(*msg->key);
+                bool status = p.remove(msg->key);
                 msg->response = (void *) status;
                 // Delete dynamic data passed through message queue
                 msg->acv.notify();
@@ -129,7 +129,7 @@ void WorkerThread<Text, s>::Process()
             {
                 array<Text, 4> const *ar = static_cast<const array<Text, 4> *>(msg->data);
                 for (auto i : *ar) cout<<i.x<<endl;
-                bool status = p.insert(*msg->key, *ar);
+                bool status = p.insert(msg->key, *ar);
                 msg->response = (void *) status;
                 // Delete dynamic data passed through message queue
                 msg->acv.notify();
@@ -141,7 +141,7 @@ void WorkerThread<Text, s>::Process()
             {
 
                 unordered_map<string, Text> const *newData = static_cast<const unordered_map<string, Text>*>(msg->data);
-                bool status = p.update(*msg->key, *newData);
+                bool status = p.update(msg->key, *newData);
                 msg->response = (void *) status;
                 // Delete dynamic data passed through message queue
                 msg->acv.notify();
@@ -152,11 +152,10 @@ void WorkerThread<Text, s>::Process()
             case MSG_READ_FULL_TEXT:
             {
 
-                array<Text, 4> ar = p.read(*msg->key);
-                cout<<ar[0].x<<endl;
+                array<Text, 4> ar = p.read(msg->key);
                 msg->response = (void *) &ar;
                 // Delete dynamic data passed through message queue
-                //msg->acv.notify();
+                msg->acv.notify();
                 //msg->cv.notify_one();
                 break;
             }
@@ -166,7 +165,7 @@ void WorkerThread<Text, s>::Process()
 
                 // Convert the ThreadMsg void* data back to a UserData*
                 vector<string> const *v = static_cast<const vector<string>*>(msg->data);
-                unordered_map<string, Text> res = p.read(*msg->key, *v);
+                unordered_map<string, Text> res = p.read(msg->key, *v);
                 msg->response = (void *) &res;
                 // Delete dynamic data passed through message queue
                 msg->acv.notify();
@@ -219,7 +218,7 @@ void WorkerThread<long, s>::Process()
             case MSG_DELETE:
             {
 
-                bool status = p.remove(*msg->key);
+                bool status = p.remove(msg->key);
                 msg->response = (void *) status;
                 // Delete dynamic data passed through message queue
                 msg->acv.notify();
@@ -277,11 +276,19 @@ void WorkerThread<long, s>::Process()
     }
 }
 
-WorkerRequest::WorkerRequest(int type, const string *key, const void *data, boost::asio::io_service & service) :
-        type(type), key(key), data(data), acv(service)
+WorkerRequest::WorkerRequest(boost::asio::io_service & service) :
+        acv(service)
 {
     //response = new;
     //lock = new
 }
+
+void WorkerRequest::update(int type_, string key_, void *data_) {
+    type = type_;
+    key = key_;
+    data = data_;
+}
+
+
 template class WorkerThread<Text, 4>;
 template class WorkerThread<long, 1>;

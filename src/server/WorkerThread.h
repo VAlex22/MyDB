@@ -7,10 +7,11 @@
 
 struct WorkerRequest
 {
-    WorkerRequest(int type, const string *key, const void* data, boost::asio::io_service & service);
+    WorkerRequest(boost::asio::io_service & service);
+    void update(int type, string key, void* data);
     int type;
-    const string *key;
-    const void *data;
+    string key;
+    void *data;
     //condition_variable cv;
     //mutex m;
     AsyncConditionVariable acv;

@@ -78,7 +78,7 @@ TEST_F(PartitionTest, UpdateTest)
         {
             int index = rand() % NUMBER_OF_FIELDS1;
             Text t = generateText();
-            newData["field"+to_string(index)] = t;
+            newData["f"+to_string(index)] = t;
 
             data1[key][index] = t;
         }
@@ -103,7 +103,7 @@ TEST_F(PartitionTest, ReadSomeFieldsTest)
         for (unsigned k = 0; k < n; k++)
         {
             int index = rand() % NUMBER_OF_FIELDS1;
-            string field = "field"+to_string(index);
+            string field = "f"+to_string(index);
             if (find(fields.begin(), fields.end(), field) == fields.end())
             {
                 fields.push_back(field);
