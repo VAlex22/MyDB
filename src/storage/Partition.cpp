@@ -110,6 +110,8 @@ unordered_map<string, t> Partition<t, s>::read(string key, vector<string> fields
     auto row = rowsByKey.find(key);
     if (row == rowsByKey.end())
     {
+        cout<<"invalid entry"<<endl;
+
         throw NO_SUCH_ENTRY_EXCEPTION;
 
     } else
@@ -120,6 +122,7 @@ unordered_map<string, t> Partition<t, s>::read(string key, vector<string> fields
             auto index = fieldIndexes.find(field);
             if (index == fieldIndexes.end())
             {
+                cout<<"invalid "<<endl;
 
                 throw INVALID_FIELD_EXCEPTION;
 
@@ -142,6 +145,9 @@ array<t, s> Partition<t, s>::read(string key) {
     }
     else
     {
+        cout<<"invalid entry "<<key<<" "<<endl;
+        for (auto a: rowsByKey) cout<<a.first<<endl;
+
         throw NO_SUCH_ENTRY_EXCEPTION;
     }
 }

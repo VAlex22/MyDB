@@ -1,5 +1,5 @@
 set(MyDB_SRCS storage/Partition.cpp storage/Partition.h messages/Messages.pb.cc messages/Messages.pb.h
-        server/Server.cpp server/Server.h server/Session.cpp server/Session.h global.h server/WorkerThread.cpp server/WorkerThread.h)
+        server/Server.cpp server/Server.h server/Session.cpp server/Session.h global.h server/WorkerThread.cpp server/WorkerThread.h server/AsyncConditionVariable.cpp server/AsyncConditionVariable.h)
 
 add_executable(server server/main.cpp)
 

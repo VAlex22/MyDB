@@ -21,12 +21,12 @@ WorkerThread<Text, s>::~WorkerThread()
         return;
 
     // Create a new ThreadMsg
-    WorkerRequest* request = new WorkerRequest();
+    //WorkerRequest* request = new WorkerRequest();
 
     // Put exit thread message into the queue
     {
         lock_guard<mutex> lock(m_mutex);
-        m_queue.push(request);
+      //  m_queue.push(request);
         m_cv.notify_one();
     }
 
@@ -42,12 +42,12 @@ WorkerThread<long, s>::~WorkerThread()
         return;
 
     // Create a new ThreadMsg
-    WorkerRequest* request = new WorkerRequest();
+    //WorkerRequest* request = new WorkerRequest();
 
     // Put exit thread message into the queue
     {
         lock_guard<mutex> lock(m_mutex);
-        m_queue.push(request);
+        //m_queue.push(request);
         m_cv.notify_one();
     }
 
@@ -59,7 +59,6 @@ WorkerThread<long, s>::~WorkerThread()
 template <size_t s>
 void WorkerThread<Text, s>::PostMsg(WorkerRequest* data)
 {
-
 
     // Add user data msg to queue and notify worker thread
     std::unique_lock<std::mutex> lk(m_mutex);
@@ -122,7 +121,7 @@ void WorkerThread<Text, s>::Process()
                 bool status = p.remove(*msg->key);
                 msg->response = (void *) status;
                 // Delete dynamic data passed through message queue
-                msg->responseReady = true;
+                msg->acv.notify();
                 //msg->cv.notify_one();
                 break;
             }
@@ -133,7 +132,7 @@ void WorkerThread<Text, s>::Process()
                 bool status = p.insert(*msg->key, *ar);
                 msg->response = (void *) status;
                 // Delete dynamic data passed through message queue
-                msg->responseReady = true;
+                msg->acv.notify();
                 //msg->cv.notify_one();
                 break;
             }
@@ -145,7 +144,7 @@ void WorkerThread<Text, s>::Process()
                 bool status = p.update(*msg->key, *newData);
                 msg->response = (void *) status;
                 // Delete dynamic data passed through message queue
-                msg->responseReady = true;
+                msg->acv.notify();
                 //msg->cv.notify_one();
                 break;
             }
@@ -154,9 +153,10 @@ void WorkerThread<Text, s>::Process()
             {
 
                 array<Text, 4> ar = p.read(*msg->key);
+                cout<<ar[0].x<<endl;
                 msg->response = (void *) &ar;
                 // Delete dynamic data passed through message queue
-                msg->responseReady = true;
+                //msg->acv.notify();
                 //msg->cv.notify_one();
                 break;
             }
@@ -169,7 +169,7 @@ void WorkerThread<Text, s>::Process()
                 unordered_map<string, Text> res = p.read(*msg->key, *v);
                 msg->response = (void *) &res;
                 // Delete dynamic data passed through message queue
-
+                msg->acv.notify();
                 //msg->cv.notify_one();
                 break;
             }
@@ -222,8 +222,8 @@ void WorkerThread<long, s>::Process()
                 bool status = p.remove(*msg->key);
                 msg->response = (void *) status;
                 // Delete dynamic data passed through message queue
-                msg->responseReady = true;
-                msg->cv.notify_one();
+                msg->acv.notify();
+                //msg->cv.notify_one();
                 break;
             }
 
@@ -277,15 +277,11 @@ void WorkerThread<long, s>::Process()
     }
 }
 
-WorkerRequest::WorkerRequest(int type, const string *key, const void *data) : type(type), key(key), data(data), responseReady(false)
+WorkerRequest::WorkerRequest(int type, const string *key, const void *data, boost::asio::io_service & service) :
+        type(type), key(key), data(data), acv(service)
 {
     //response = new;
     //lock = new
 }
-
-WorkerRequest::WorkerRequest() : responseReady(false){
-
-}
-
 template class WorkerThread<Text, 4>;
 template class WorkerThread<long, 1>;

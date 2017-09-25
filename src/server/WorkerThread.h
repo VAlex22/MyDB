@@ -3,17 +3,17 @@
 
 #include "../global.h"
 #include "../storage/Partition.h"
+#include "AsyncConditionVariable.h"
 
 struct WorkerRequest
 {
-    WorkerRequest();
-    WorkerRequest(int type, const string *key, const void* data);
+    WorkerRequest(int type, const string *key, const void* data, boost::asio::io_service & service);
     int type;
     const string *key;
     const void *data;
-    condition_variable cv;
-    mutex m;
-    bool responseReady;
+    //condition_variable cv;
+    //mutex m;
+    AsyncConditionVariable acv;
     void *response;
 };
 
