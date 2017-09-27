@@ -12,8 +12,6 @@ struct WorkerRequest
     int type;
     string key;
     void *data;
-    //condition_variable cv;
-    //mutex m;
     AsyncConditionVariable acv;
     bool error=false;
     void *response;

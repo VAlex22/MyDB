@@ -104,10 +104,6 @@ void Session<Text, s>::handle_socket_read(const boost::system::error_code &error
                     size_t partition = Hash_fn::get_partition(request.key());
                     (*workers)[partition].PostMsg(wr);
                     wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_delete, this->shared_from_this(), boost::asio::placeholders::error));
-
-                    //unique_lock<mutex> lock(wr->m);
-                    //wr->cv.wait(lock);
-
                     break;
                 }
                 case mydb::Request_REQUEST_TYPE_INSERT_TEXT : {
@@ -122,9 +118,6 @@ void Session<Text, s>::handle_socket_read(const boost::system::error_code &error
                         ar[(*workers)[partition].p.fieldIndexes[i->first]] = text;
                     }
                     wr->update(MSG_INSERT_TEXT, request.key(), &ar);
-                    //unique_lock<mutex> lock(wr->m);
-                    //wr->cv.wait(lock);
-
                     (*workers)[partition].PostMsg(wr);
                     wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_insert, this->shared_from_this(), boost::asio::placeholders::error));
 
@@ -147,8 +140,6 @@ void Session<Text, s>::handle_socket_read(const boost::system::error_code &error
                             v.push_back(i);
                         }
                         wr->update(MSG_READ_PARTIAL_TEXT, request.key(), &v);
-                        //unique_lock<mutex> lock(wr->m);
-                        //wr->cv.wait(lock);
                         (*workers)[partition].PostMsg(wr);
                         wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_partial_read, this->shared_from_this(), boost::asio::placeholders::error));
                     }
@@ -165,10 +156,7 @@ void Session<Text, s>::handle_socket_read(const boost::system::error_code &error
 
                         newData.insert({it.first, text});
                     }
-
                     wr->update(MSG_UPDATE_TEXT, request.key(), &newData);
-                    //unique_lock<mutex> lock(wr->m);
-                    //wr->cv.wait(lock);
                     size_t partition = Hash_fn::get_partition(request.key());
                     (*workers)[partition].PostMsg(wr);
                     wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_update, this->shared_from_this(), boost::asio::placeholders::error));
@@ -305,7 +293,6 @@ void Session<Text, s>::handle_partial_read(const boost::system::error_code& erro
         }
 
         int size = response.ByteSize();
-        cout << size << endl;
         response.SerializeToArray(output, size);
         boost::asio::async_write(
                 socket_,
@@ -323,7 +310,6 @@ void Session<Text, s>::handle_update(const boost::system::error_code& error) {
     response.set_isstatusok(status);
 
     int size = response.ByteSize();
-    cout << size << endl;
     response.SerializeToArray(output, size);
     boost::asio::async_write(
             socket_,
@@ -345,9 +331,7 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
             case mydb::Request_REQUEST_TYPE_DELETE : {
                 wr->update(MSG_DELETE, request.key(), nullptr);
                 size_t partition = Hash_fn::get_partition(request.key());
-                (*workers)[partition].PostMsg(wr);
-                //unique_lock<mutex> lock(wr->m);
-                //wr->cv.wait(lock);
+                (*workers)[partition].PostMsg(wr);;
                 wr->acv.async_wait(boost::bind(&Session<long, s>::handle_delete, this->shared_from_this(),
                                                boost::asio::placeholders::error));
                 break;
@@ -360,8 +344,6 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
                 wr->update(MSG_DELETE, request.key(), &ar);
                 size_t partition = Hash_fn::get_partition(request.key());
                 (*workers)[partition].PostMsg(wr);
-                //unique_lock<mutex> lock(wr->m);
-                //wr->cv.wait(lock);
                 wr->acv.async_wait(boost::bind(&Session<long, s>::handle_insert, this->shared_from_this(),
                                                boost::asio::placeholders::error));
 
@@ -374,8 +356,6 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
 
                 size_t partition = Hash_fn::get_partition(request.key());
                 (*workers)[partition].PostMsg(wr);
-                //unique_lock<mutex> lock(wr->m);
-                //wr->cv.wait(lock);
                 wr->acv.async_wait(boost::bind(&Session<long, s>::handle_read, this->shared_from_this(),
                                                boost::asio::placeholders::error));
                 break;
@@ -388,8 +368,6 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
                 wr->update(MSG_UPDATE_LONG, request.key(), &newData);
                 size_t partition = Hash_fn::get_partition(request.key());
                 (*workers)[partition].PostMsg(wr);
-                //unique_lock<mutex> lock(wr->m);
-                //wr->cv.wait(lock);
                 wr->acv.async_wait(boost::bind(&Session<long, s>::handle_update, this->shared_from_this(),
                                                boost::asio::placeholders::error));
                 break;
@@ -452,7 +430,7 @@ void Session<long, s>::handle_read(const boost::system::error_code& error) {
         boost::asio::async_write(
                 socket_,
                 boost::asio::buffer(output, size),
-                boost::bind(&Session<Text, s>::handle_socket_write, this->shared_from_this(),
+                boost::bind(&Session<long, s>::handle_socket_write, this->shared_from_this(),
                             boost::asio::placeholders::error)
         );
     }
@@ -482,7 +460,6 @@ void Session<long, s>::handle_update(const boost::system::error_code& error) {
     response.set_isstatusok(status);
 
     int size = response.ByteSize();
-    cout << size << endl;
     response.SerializeToArray(output, size);
     boost::asio::async_write(
             socket_,

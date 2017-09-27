@@ -71,8 +71,6 @@ template <size_t s>
 void WorkerThread<long, s>::PostMsg(WorkerRequest* data)
 {
     msgId++;
-
-    // Add user data msg to queue and notify worker thread
     std::unique_lock<std::mutex> lk(m_mutex);
     m_queue.push(data);
     m_cv.notify_one();
@@ -114,22 +112,16 @@ void WorkerThread<Text, s>::Process()
                 }
 
                 case MSG_DELETE: {
-
                     bool status = p.remove(msg->key);
                     msg->response = (void *) status;
-                    // Delete dynamic data passed through message queue
                     msg->acv.notify();
-                    //msg->cv.notify_one();
                     break;
                 }
                 case MSG_INSERT_TEXT: {
-                    array<Text, 4> const *ar = static_cast<const array<Text, 4> *>(msg->data);
-                    for (auto i : *ar) cout << i.x << endl;
+                    array<Text, s> const *ar = static_cast<const array<Text, 4> *>(msg->data);
                     bool status = p.insert(msg->key, *ar);
                     msg->response = (void *) status;
-                    // Delete dynamic data passed through message queue
                     msg->acv.notify();
-                    //msg->cv.notify_one();
                     break;
                 }
 
@@ -138,31 +130,24 @@ void WorkerThread<Text, s>::Process()
                     unordered_map<string, Text> const *newData = static_cast<const unordered_map<string, Text> *>(msg->data);
                     bool status = p.update(msg->key, *newData);
                     msg->response = (void *) status;
-                    // Delete dynamic data passed through message queue
                     msg->acv.notify();
-                    //msg->cv.notify_one();
                     break;
                 }
 
                 case MSG_READ_FULL_TEXT: {
 
-                    array<Text, 4> ar = p.read(msg->key);
+                    array<Text, s> ar = p.read(msg->key);
                     msg->response = (void *) &ar;
-                    // Delete dynamic data passed through message queue
                     msg->acv.notify();
-                    //msg->cv.notify_one();
                     break;
                 }
 
                 case MSG_READ_PARTIAL_TEXT: {
 
-                    // Convert the ThreadMsg void* data back to a UserData*
                     vector<string> const *v = static_cast<const vector<string> *>(msg->data);
                     unordered_map<string, Text> res = p.read(msg->key, *v);
                     msg->response = (void *) &res;
-                    // Delete dynamic data passed through message queue
                     msg->acv.notify();
-                    //msg->cv.notify_one();
                     break;
                 }
 
@@ -227,55 +212,34 @@ void WorkerThread<long, s>::Process() {
                 }
 
                 case MSG_DELETE: {
-
                     bool status = p.remove(msg->key);
                     msg->response = (void *) status;
-                    // Delete dynamic data passed through message queue
                     msg->acv.notify();
-                    //msg->cv.notify_one();
                     break;
                 }
 
-
                 case MSG_INSERT_LONG: {
-
-                    // Convert the ThreadMsg void* data back to a UserData*
-                    const UserData *userData = static_cast<const UserData *>(msg.first->msg);
-
-                    cout << userData->msg.c_str() << " " << userData->year << " on " << THREAD_NAME << endl;
-
-                    // Delete dynamic data passed through message queue
-                    msg->responseReady = true;
-                    msg->cv.notify_one();
+                    array<long, s> const *ar = static_cast<const array<long, s> *>(msg->data);
+                    bool status = p.insert(msg->key, *ar);
+                    msg->response = (void *) status;
+                    msg->acv.notify();
                     break;
                 }
 
                 case MSG_UPDATE_LONG: {
-
-                    // Convert the ThreadMsg void* data back to a UserData*
-                    const UserData *userData = static_cast<const UserData *>(msg.first->msg);
-
-                    cout << userData->msg.c_str() << " " << userData->year << " on " << THREAD_NAME << endl;
-                    msg->responseReady = true;
-                    // Delete dynamic data passed through message queue
-                    msg->cv.notify_one();
+                    unordered_map<string, long> const *newData = static_cast<const unordered_map<string, long> *>(msg->data);
+                    bool status = p.update(msg->key, *newData);
+                    msg->response = (void *) status;
+                    msg->acv.notify();
                     break;
                 }
 
                 case MSG_READ_LONG: {
-
-                    // Convert the ThreadMsg void* data back to a UserData*
-                    const UserData *userData = static_cast<const UserData *>(msg.first->msg);
-
-                    cout << userData->msg.c_str() << " " << userData->year << " on " << THREAD_NAME << endl;
-
-                    // Delete dynamic data passed through message queue
-                    delete userData;
-                    msg->responseReady = true;
-                    msg->cv.notify_one();
+                    array<long, s> ar = p.read(msg->key);
+                    msg->response = (void *) &ar;
+                    msg->acv.notify();
                     break;
                 }
-
 
                 default:
                     break;
@@ -299,7 +263,6 @@ void WorkerThread<long, s>::Process() {
             msg->response = (void *) false;
             msg->error = true;
             msg->acv.notify();
-
         }
     }
 }
@@ -307,8 +270,6 @@ void WorkerThread<long, s>::Process() {
 WorkerRequest::WorkerRequest(boost::asio::io_service & service) :
         acv(service)
 {
-    //response = new;
-    //lock = new
 }
 
 void WorkerRequest::update(int type_, string key_, void *data_) {
