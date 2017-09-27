@@ -15,6 +15,7 @@ struct WorkerRequest
     //condition_variable cv;
     //mutex m;
     AsyncConditionVariable acv;
+    bool error=false;
     void *response;
 };
 
