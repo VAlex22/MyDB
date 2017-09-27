@@ -3,7 +3,7 @@
 
 #include "../global.h"
 #include "../storage/Partition.h"
-#include "AsyncConditionVariable.h"
+#include "../utils/AsyncConditionVariable.h"
 
 struct WorkerRequest
 {
@@ -49,10 +49,11 @@ public:
     ~WorkerThread();
     void PostMsg(WorkerRequest* wr);
     Partition<Text, s> p;
-
-private:
     WorkerThread(const WorkerThread&);
     WorkerThread& operator=(const WorkerThread&);
+
+private:
+
     void Process();
 
     uint64_t msgId;

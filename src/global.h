@@ -16,7 +16,6 @@
 #include <atomic>
 #include <condition_variable>
 
-
 #include <boost/array.hpp>
 #include <boost/bind.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -44,6 +43,7 @@
 #define MSG_UPDATE_LONG         8
 #define MSG_READ_LONG           9
 
+#define PARTITIONS              3
 
 
 using boost::asio::local::stream_protocol;

@@ -1,10 +1,8 @@
 #include "Session.h"
 
-void yield(){}
-
 template <size_t s>
-Session<Text, s>::Session(boost::asio::io_service& io_service, WorkerThread<Text, s> *w) :
-        io_service_(io_service), socket_(io_service), w(w)
+Session<Text, s>::Session(boost::asio::io_service& io_service, array<WorkerThread<Text, s>, PARTITIONS> *workers) :
+        io_service_(io_service), socket_(io_service), workers(workers)
 {
     wr = new WorkerRequest(io_service);
     cout<<"New Session"<<endl;
@@ -31,8 +29,8 @@ void Session<Text, s>::start()
 }
 
 template <size_t s>
-Session<long, s>::Session(boost::asio::io_service& io_service, WorkerThread<long, s> *w) :
-        io_service_(io_service), socket_(io_service), w(w)
+Session<long, s>::Session(boost::asio::io_service& io_service, array<WorkerThread<long, s>, PARTITIONS> *workers) :
+        io_service_(io_service), socket_(io_service), workers(workers)
 {
     cout<<"New Session"<<endl;
 }
@@ -103,7 +101,8 @@ void Session<Text, s>::handle_socket_read(const boost::system::error_code &error
                 case mydb::Request_REQUEST_TYPE_DELETE : {
                     wr->update(MSG_DELETE, request.key(), nullptr);
 
-                    w->PostMsg(wr);
+                    size_t partition = Hash_fn::get_partition(request.key());
+                    (*workers)[partition].PostMsg(wr);
                     wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_delete, this->shared_from_this(), boost::asio::placeholders::error));
 
                     //unique_lock<mutex> lock(wr->m);
@@ -115,17 +114,18 @@ void Session<Text, s>::handle_socket_read(const boost::system::error_code &error
                     array<Text, s> ar;
 
                     const google::protobuf::Map<string, string> &m = request.text_row();
+                    size_t partition = Hash_fn::get_partition(request.key());
 
                     for (auto i = m.begin(); i != m.end(); ++i) {
                         Text text = Text();
                         strcpy(text.x, i->second.c_str());
-                        ar[w->p.fieldIndexes[i->first]] = text;
+                        ar[(*workers)[partition].p.fieldIndexes[i->first]] = text;
                     }
                     wr->update(MSG_INSERT_TEXT, request.key(), &ar);
                     //unique_lock<mutex> lock(wr->m);
                     //wr->cv.wait(lock);
 
-                    w->PostMsg(wr);
+                    (*workers)[partition].PostMsg(wr);
                     wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_insert, this->shared_from_this(), boost::asio::placeholders::error));
 
                     break;
@@ -133,11 +133,12 @@ void Session<Text, s>::handle_socket_read(const boost::system::error_code &error
 
                 case mydb::Request_REQUEST_TYPE_READ_TEXT : {
                     const google::protobuf::RepeatedPtrField<string> &fields = request.fields();
+                    size_t partition = Hash_fn::get_partition(request.key());
                     if (fields.empty()) {
                         wr->update(MSG_READ_FULL_TEXT, request.key(), nullptr);
                         //unique_lock<mutex> lock(wr->m);
                         //wr->cv.wait(lock);
-                        w->PostMsg(wr);
+                        (*workers)[partition].PostMsg(wr);
                         wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_full_read, this->shared_from_this(), boost::asio::placeholders::error));
 
                     } else {
@@ -148,7 +149,7 @@ void Session<Text, s>::handle_socket_read(const boost::system::error_code &error
                         wr->update(MSG_READ_PARTIAL_TEXT, request.key(), &v);
                         //unique_lock<mutex> lock(wr->m);
                         //wr->cv.wait(lock);
-                        w->PostMsg(wr);
+                        (*workers)[partition].PostMsg(wr);
                         wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_partial_read, this->shared_from_this(), boost::asio::placeholders::error));
                     }
 
@@ -168,7 +169,8 @@ void Session<Text, s>::handle_socket_read(const boost::system::error_code &error
                     wr->update(MSG_UPDATE_TEXT, request.key(), &newData);
                     //unique_lock<mutex> lock(wr->m);
                     //wr->cv.wait(lock);
-                    w->PostMsg(wr);
+                    size_t partition = Hash_fn::get_partition(request.key());
+                    (*workers)[partition].PostMsg(wr);
                     wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_update, this->shared_from_this(), boost::asio::placeholders::error));
 
                     break;
@@ -250,7 +252,7 @@ void Session<Text, s>::handle_full_read(const boost::system::error_code& error) 
     response.set_type(mydb::Response_RESPONSE_TYPE_READ_TEXT);
     array<Text, s> *ar = static_cast<array<Text, s>*>(wr->response);
     for (int i = 0; i < s; i++) {
-        response.mutable_text_result()->insert({w->p.indexFields[i], string((*ar)[i].x)});
+        response.mutable_text_result()->insert({(*workers)[0].p.indexFields[i], string((*ar)[i].x)});
     }
     int size = response.ByteSize();
     response.SerializeToArray(output, size);
@@ -310,7 +312,8 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
             switch (request.type()) {
                 case mydb::Request_REQUEST_TYPE_DELETE : {
                     wr->update(MSG_DELETE, request.key(), nullptr);
-                    w->PostMsg(wr);
+                    size_t partition = Hash_fn::get_partition(request.key());
+                    (*workers)[partition].PostMsg(wr);
                     //unique_lock<mutex> lock(wr->m);
                     //wr->cv.wait(lock);
                     wr->acv.async_wait(boost::bind(&Session<long, s>::handle_delete, this->shared_from_this(), boost::asio::placeholders::error));                    break;
@@ -321,7 +324,8 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
                     array<long, s> ar;
                     ar[0] = request.long_row();
                     wr->update(MSG_DELETE, request.key(), &ar);
-                    w->PostMsg(wr);
+                    size_t partition = Hash_fn::get_partition(request.key());
+                    (*workers)[partition].PostMsg(wr);
                     //unique_lock<mutex> lock(wr->m);
                     //wr->cv.wait(lock);
                     wr->acv.async_wait(boost::bind(&Session<long, s>::handle_insert, this->shared_from_this(), boost::asio::placeholders::error));
@@ -333,7 +337,8 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
 
                     wr->update(MSG_READ_LONG, request.key(), nullptr);
 
-                    w->PostMsg(wr);
+                    size_t partition = Hash_fn::get_partition(request.key());
+                    (*workers)[partition].PostMsg(wr);
                     //unique_lock<mutex> lock(wr->m);
                     //wr->cv.wait(lock);
                     wr->acv.async_wait(boost::bind(&Session<long, s>::handle_read, this->shared_from_this(), boost::asio::placeholders::error));
@@ -345,8 +350,8 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
                     unordered_map<string, long> newData;
                     newData.insert({request.long_field(), request.long_row()});
                     wr->update(MSG_UPDATE_LONG, request.key(), &newData);
-                    w->PostMsg(wr);
-
+                    size_t partition = Hash_fn::get_partition(request.key());
+                    (*workers)[partition].PostMsg(wr);
                     //unique_lock<mutex> lock(wr->m);
                     //wr->cv.wait(lock);
                     wr->acv.async_wait(boost::bind(&Session<long, s>::handle_update, this->shared_from_this(), boost::asio::placeholders::error));

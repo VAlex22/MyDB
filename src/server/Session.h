@@ -5,12 +5,13 @@
 #include "../global.h"
 #include "../messages/Messages.pb.h"
 #include "../storage/Partition.h"
+#include "../utils/Hash_fn.h"
 
 template <typename t, size_t s>
 class Session : public boost::enable_shared_from_this<Session<t,s>>
 {
 public:
-    Session(boost::asio::io_service& io_service, WorkerThread<t, s> *w);
+    Session(boost::asio::io_service& io_service, array<WorkerThread<t, s>, PARTITIONS> *workers);
     stream_protocol::socket& socket();
     void start();
     void handle_socket_read(const boost::system::error_code &error, size_t bytes_transferred);
@@ -21,17 +22,15 @@ private:
     stream_protocol::socket socket_;
     boost::array<char, 1024> input;
     char output[1024];
-    WorkerThread<t, s> *w;
+    array<WorkerThread<t, s>, PARTITIONS> *workers;
     WorkerRequest *wr;
-    //Partition<t, s> *p;
-
 };
 
 template <size_t s>
 class Session<Text, s> : public boost::enable_shared_from_this<Session<Text, s>>
 {
 public:
-    Session(boost::asio::io_service& io_service, WorkerThread<Text, s> *w);
+    Session(boost::asio::io_service& io_service, array<WorkerThread<Text, s>, PARTITIONS> *workers);
     stream_protocol::socket& socket();
     void start();
     void handle_socket_read(const boost::system::error_code &error, size_t bytes_transferred);
@@ -47,17 +46,15 @@ private:
     stream_protocol::socket socket_;
     boost::array<char, 1024> input;
     char output[1024];
-    WorkerThread<Text, s> *w;
+    array<WorkerThread<Text, s>, PARTITIONS> *workers;
     WorkerRequest *wr;
-    //Partition<Text, s> *p;
-
 };
 
 template <size_t s>
 class Session<long, s> : public boost::enable_shared_from_this<Session<long, s>>
 {
 public:
-    Session(boost::asio::io_service& io_service, WorkerThread<long, s> *w);
+    Session(boost::asio::io_service& io_service, array<WorkerThread<long, s>, PARTITIONS> *workers);
     stream_protocol::socket& socket();
     void start();
     void handle_socket_read(const boost::system::error_code &error, size_t bytes_transferred);
@@ -72,10 +69,8 @@ private:
     stream_protocol::socket socket_;
     boost::array<char, 1024> input;
     char output[1024];
-    WorkerThread<long, s> *w;
+    array<WorkerThread<long, s>, PARTITIONS> *workers;
     WorkerRequest *wr;
-    //Partition<long, s> *p;
-
 };
 
 

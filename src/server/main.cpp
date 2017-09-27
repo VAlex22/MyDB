@@ -9,10 +9,13 @@ int main(int argc, char* argv[])
 
         boost::asio::io_service io_service;
         //Partition<Text, 4> *p = new Partition<Text, 4>(1000);
-        WorkerThread<Text, 4> *w = new WorkerThread<Text, 4>("huy", 1000);
+        array<WorkerThread<Text, 4>, PARTITIONS> workers = {
+                {WorkerThread<Text, 4>("1", 1000), WorkerThread<Text, 4>("2", 1000), WorkerThread<Text, 4>("3", 1000)}
+        };
+
 
         std::remove("/tmp/mydbsocket");
-        Server<Text, 4> s(io_service, "/tmp/mydbsocket", w);
+        Server<Text, 4> s(io_service, "/tmp/mydbsocket", &workers);
 
         io_service.run();
     }
