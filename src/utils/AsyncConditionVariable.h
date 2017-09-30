@@ -11,10 +11,15 @@ public:
     template <typename WaitHandler>
     void async_wait(WaitHandler handler) {
         timer_.async_wait(handler);
+        if (notified)
+        {
+            timer_.cancel();
+        }
     };
     void notify();
 
 private:
+    bool notified;
     boost::asio::deadline_timer timer_;
 };
 

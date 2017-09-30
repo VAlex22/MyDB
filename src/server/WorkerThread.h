@@ -7,8 +7,7 @@
 
 struct WorkerRequest
 {
-    WorkerRequest(boost::asio::io_service & service);
-    void update(int type, string key, void* data);
+    WorkerRequest(boost::asio::io_service & service, int type, string key, void* data);
     int type;
     string key;
     void *data;
@@ -69,13 +68,14 @@ class WorkerThread<long, s>
 {
 public:
     WorkerThread(const char* threadName, unsigned partitionSize);
+    WorkerThread(const char* threadName, unsigned partitionSize, unordered_map<string, unsigned> fieldIndexes);
     ~WorkerThread();
     void PostMsg(WorkerRequest* wr);
     Partition<long, s> p;
-
-private:
     WorkerThread(const WorkerThread&);
     WorkerThread& operator=(const WorkerThread&);
+
+private:
     void Process();
 
     uint64_t msgId;

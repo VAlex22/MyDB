@@ -74,8 +74,8 @@ const ::google::protobuf::uint32 TableStruct::offsets[] = {
   ~0u,  // no _weak_field_map_
   GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Response, type_),
   GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Response, isstatusok_),
-  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Response, text_result_),
   GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Response, long_result_),
+  GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(Response, text_result_),
 };
 
 static const ::google::protobuf::internal::MigrationSchema schemas[] = {
@@ -150,16 +150,16 @@ void AddDescriptorsImpl() {
       "UEST_TYPE\022\r\n\005table\030\002 \001(\t\022\013\n\003key\030\003 \001(\t\022\016\n"
       "\006fields\030\004 \003(\t\022,\n\010text_row\030\005 \003(\0132\032.mydb.R"
       "equest.TextRowEntry\022\022\n\nlong_field\030\006 \001(\t\022"
-      "\020\n\010long_row\030\007 \001(\003\032.\n\014TextRowEntry\022\013\n\003key"
-      "\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"|\n\014REQUEST_TYP"
+      "\020\n\010long_row\030\007 \001(\022\032.\n\014TextRowEntry\022\013\n\003key"
+      "\030\001 \001(\t\022\r\n\005value\030\002 \001(\014:\0028\001\"|\n\014REQUEST_TYP"
       "E\022\017\n\013INSERT_TEXT\020\000\022\017\n\013INSERT_LONG\020\001\022\r\n\tR"
       "EAD_TEXT\020\002\022\r\n\tREAD_LONG\020\003\022\017\n\013UPDATE_TEXT"
       "\020\004\022\017\n\013UPDATE_LONG\020\005\022\n\n\006DELETE\020\006\"\202\002\n\010Resp"
       "onse\022*\n\004type\030\001 \001(\0162\034.mydb.Response.RESPO"
-      "NSE_TYPE\022\022\n\nisStatusOk\030\002 \001(\010\0223\n\013text_res"
-      "ult\030\003 \003(\0132\036.mydb.Response.TextResultEntr"
-      "y\022\023\n\013long_result\030\004 \001(\003\0321\n\017TextResultEntr"
-      "y\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\t:\0028\001\"9\n\rRES"
+      "NSE_TYPE\022\022\n\nisStatusOk\030\002 \001(\010\022\023\n\013long_res"
+      "ult\030\003 \001(\t\0223\n\013text_result\030\004 \003(\0132\036.mydb.Re"
+      "sponse.TextResultEntry\0321\n\017TextResultEntr"
+      "y\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\014:\0028\001\"9\n\rRES"
       "PONSE_TYPE\022\r\n\tREAD_TEXT\020\000\022\r\n\tREAD_LONG\020\001"
       "\022\n\n\006STATUS\020\002b\006proto3"
   };
@@ -430,7 +430,7 @@ bool Request::MergePartialFromCodedStream(
         break;
       }
 
-      // map<string, string> text_row = 5;
+      // map<string, bytes> text_row = 5;
       case 5: {
         if (static_cast< ::google::protobuf::uint8>(tag) ==
             static_cast< ::google::protobuf::uint8>(42u)) {
@@ -438,7 +438,7 @@ bool Request::MergePartialFromCodedStream(
               Request_TextRowEntry,
               ::std::string, ::std::string,
               ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
-              ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
+              ::google::protobuf::internal::WireFormatLite::TYPE_BYTES,
               0 >,
             ::google::protobuf::Map< ::std::string, ::std::string > > parser(&text_row_);
           DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
@@ -447,10 +447,6 @@ bool Request::MergePartialFromCodedStream(
             parser.key().data(), parser.key().length(),
             ::google::protobuf::internal::WireFormatLite::PARSE,
             "mydb.Request.TextRowEntry.key"));
-          DO_(::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-            parser.value().data(), parser.value().length(),
-            ::google::protobuf::internal::WireFormatLite::PARSE,
-            "mydb.Request.TextRowEntry.value"));
         } else {
           goto handle_unusual;
         }
@@ -473,13 +469,13 @@ bool Request::MergePartialFromCodedStream(
         break;
       }
 
-      // int64 long_row = 7;
+      // sint64 long_row = 7;
       case 7: {
         if (static_cast< ::google::protobuf::uint8>(tag) ==
             static_cast< ::google::protobuf::uint8>(56u)) {
 
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::int64, ::google::protobuf::internal::WireFormatLite::TYPE_INT64>(
+                   ::google::protobuf::int64, ::google::protobuf::internal::WireFormatLite::TYPE_SINT64>(
                  input, &long_row_)));
         } else {
           goto handle_unusual;
@@ -550,7 +546,7 @@ void Request::SerializeWithCachedSizes(
       4, this->fields(i), output);
   }
 
-  // map<string, string> text_row = 5;
+  // map<string, bytes> text_row = 5;
   if (!this->text_row().empty()) {
     typedef ::google::protobuf::Map< ::std::string, ::std::string >::const_pointer
         ConstPtr;
@@ -562,10 +558,6 @@ void Request::SerializeWithCachedSizes(
           p->first.data(), p->first.length(),
           ::google::protobuf::internal::WireFormatLite::SERIALIZE,
           "mydb.Request.TextRowEntry.key");
-        ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-          p->second.data(), p->second.length(),
-          ::google::protobuf::internal::WireFormatLite::SERIALIZE,
-          "mydb.Request.TextRowEntry.value");
       }
     };
 
@@ -613,9 +605,9 @@ void Request::SerializeWithCachedSizes(
       6, this->long_field(), output);
   }
 
-  // int64 long_row = 7;
+  // sint64 long_row = 7;
   if (this->long_row() != 0) {
-    ::google::protobuf::internal::WireFormatLite::WriteInt64(7, this->long_row(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteSInt64(7, this->long_row(), output);
   }
 
   // @@protoc_insertion_point(serialize_end:mydb.Request)
@@ -665,7 +657,7 @@ void Request::SerializeWithCachedSizes(
       WriteStringToArray(4, this->fields(i), target);
   }
 
-  // map<string, string> text_row = 5;
+  // map<string, bytes> text_row = 5;
   if (!this->text_row().empty()) {
     typedef ::google::protobuf::Map< ::std::string, ::std::string >::const_pointer
         ConstPtr;
@@ -677,10 +669,6 @@ void Request::SerializeWithCachedSizes(
           p->first.data(), p->first.length(),
           ::google::protobuf::internal::WireFormatLite::SERIALIZE,
           "mydb.Request.TextRowEntry.key");
-        ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-          p->second.data(), p->second.length(),
-          ::google::protobuf::internal::WireFormatLite::SERIALIZE,
-          "mydb.Request.TextRowEntry.value");
       }
     };
 
@@ -733,9 +721,9 @@ void Request::SerializeWithCachedSizes(
         6, this->long_field(), target);
   }
 
-  // int64 long_row = 7;
+  // sint64 long_row = 7;
   if (this->long_row() != 0) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteInt64ToArray(7, this->long_row(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteSInt64ToArray(7, this->long_row(), target);
   }
 
   // @@protoc_insertion_point(serialize_to_array_end:mydb.Request)
@@ -754,7 +742,7 @@ size_t Request::ByteSizeLong() const {
       this->fields(i));
   }
 
-  // map<string, string> text_row = 5;
+  // map<string, bytes> text_row = 5;
   total_size += 1 *
       ::google::protobuf::internal::FromIntSize(this->text_row_size());
   {
@@ -789,10 +777,10 @@ size_t Request::ByteSizeLong() const {
         this->long_field());
   }
 
-  // int64 long_row = 7;
+  // sint64 long_row = 7;
   if (this->long_row() != 0) {
     total_size += 1 +
-      ::google::protobuf::internal::WireFormatLite::Int64Size(
+      ::google::protobuf::internal::WireFormatLite::SInt64Size(
         this->long_row());
   }
 
@@ -1083,7 +1071,7 @@ Request::mutable_fields() {
   return &fields_;
 }
 
-// map<string, string> text_row = 5;
+// map<string, bytes> text_row = 5;
 int Request::text_row_size() const {
   return text_row_.size();
 }
@@ -1154,7 +1142,7 @@ void Request::set_allocated_long_field(::std::string* long_field) {
   // @@protoc_insertion_point(field_set_allocated:mydb.Request.long_field)
 }
 
-// int64 long_row = 7;
+// sint64 long_row = 7;
 void Request::clear_long_row() {
   long_row_ = GOOGLE_LONGLONG(0);
 }
@@ -1194,8 +1182,8 @@ void Response::Response_TextResultEntry::MergeFrom(const Response_TextResultEntr
 #if !defined(_MSC_VER) || _MSC_VER >= 1900
 const int Response::kTypeFieldNumber;
 const int Response::kIsStatusOkFieldNumber;
-const int Response::kTextResultFieldNumber;
 const int Response::kLongResultFieldNumber;
+const int Response::kTextResultFieldNumber;
 #endif  // !defined(_MSC_VER) || _MSC_VER >= 1900
 
 Response::Response()
@@ -1212,15 +1200,20 @@ Response::Response(const Response& from)
       _cached_size_(0) {
   _internal_metadata_.MergeFrom(from._internal_metadata_);
   text_result_.MergeFrom(from.text_result_);
+  long_result_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  if (from.long_result().size() > 0) {
+    long_result_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.long_result_);
+  }
   ::memcpy(&type_, &from.type_,
-    reinterpret_cast<char*>(&long_result_) -
-    reinterpret_cast<char*>(&type_) + sizeof(long_result_));
+    reinterpret_cast<char*>(&isstatusok_) -
+    reinterpret_cast<char*>(&type_) + sizeof(isstatusok_));
   // @@protoc_insertion_point(copy_constructor:mydb.Response)
 }
 
 void Response::SharedCtor() {
-  ::memset(&type_, 0, reinterpret_cast<char*>(&long_result_) -
-    reinterpret_cast<char*>(&type_) + sizeof(long_result_));
+  long_result_.UnsafeSetDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  ::memset(&type_, 0, reinterpret_cast<char*>(&isstatusok_) -
+    reinterpret_cast<char*>(&type_) + sizeof(isstatusok_));
   _cached_size_ = 0;
 }
 
@@ -1230,6 +1223,7 @@ Response::~Response() {
 }
 
 void Response::SharedDtor() {
+  long_result_.DestroyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
 }
 
 void Response::SetCachedSize(int size) const {
@@ -1258,8 +1252,9 @@ Response* Response::New(::google::protobuf::Arena* arena) const {
 void Response::Clear() {
 // @@protoc_insertion_point(message_clear_start:mydb.Response)
   text_result_.Clear();
-  ::memset(&type_, 0, reinterpret_cast<char*>(&long_result_) -
-    reinterpret_cast<char*>(&type_) + sizeof(long_result_));
+  long_result_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  ::memset(&type_, 0, reinterpret_cast<char*>(&isstatusok_) -
+    reinterpret_cast<char*>(&type_) + sizeof(isstatusok_));
 }
 
 bool Response::MergePartialFromCodedStream(
@@ -1301,15 +1296,31 @@ bool Response::MergePartialFromCodedStream(
         break;
       }
 
-      // map<string, string> text_result = 3;
+      // string long_result = 3;
       case 3: {
         if (static_cast< ::google::protobuf::uint8>(tag) ==
             static_cast< ::google::protobuf::uint8>(26u)) {
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_long_result()));
+          DO_(::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+            this->long_result().data(), this->long_result().length(),
+            ::google::protobuf::internal::WireFormatLite::PARSE,
+            "mydb.Response.long_result"));
+        } else {
+          goto handle_unusual;
+        }
+        break;
+      }
+
+      // map<string, bytes> text_result = 4;
+      case 4: {
+        if (static_cast< ::google::protobuf::uint8>(tag) ==
+            static_cast< ::google::protobuf::uint8>(34u)) {
           Response_TextResultEntry::Parser< ::google::protobuf::internal::MapField<
               Response_TextResultEntry,
               ::std::string, ::std::string,
               ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
-              ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
+              ::google::protobuf::internal::WireFormatLite::TYPE_BYTES,
               0 >,
             ::google::protobuf::Map< ::std::string, ::std::string > > parser(&text_result_);
           DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
@@ -1318,24 +1329,6 @@ bool Response::MergePartialFromCodedStream(
             parser.key().data(), parser.key().length(),
             ::google::protobuf::internal::WireFormatLite::PARSE,
             "mydb.Response.TextResultEntry.key"));
-          DO_(::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-            parser.value().data(), parser.value().length(),
-            ::google::protobuf::internal::WireFormatLite::PARSE,
-            "mydb.Response.TextResultEntry.value"));
-        } else {
-          goto handle_unusual;
-        }
-        break;
-      }
-
-      // int64 long_result = 4;
-      case 4: {
-        if (static_cast< ::google::protobuf::uint8>(tag) ==
-            static_cast< ::google::protobuf::uint8>(32u)) {
-
-          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   ::google::protobuf::int64, ::google::protobuf::internal::WireFormatLite::TYPE_INT64>(
-                 input, &long_result_)));
         } else {
           goto handle_unusual;
         }
@@ -1380,7 +1373,17 @@ void Response::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteBool(2, this->isstatusok(), output);
   }
 
-  // map<string, string> text_result = 3;
+  // string long_result = 3;
+  if (this->long_result().size() > 0) {
+    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+      this->long_result().data(), this->long_result().length(),
+      ::google::protobuf::internal::WireFormatLite::SERIALIZE,
+      "mydb.Response.long_result");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      3, this->long_result(), output);
+  }
+
+  // map<string, bytes> text_result = 4;
   if (!this->text_result().empty()) {
     typedef ::google::protobuf::Map< ::std::string, ::std::string >::const_pointer
         ConstPtr;
@@ -1392,10 +1395,6 @@ void Response::SerializeWithCachedSizes(
           p->first.data(), p->first.length(),
           ::google::protobuf::internal::WireFormatLite::SERIALIZE,
           "mydb.Response.TextResultEntry.key");
-        ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-          p->second.data(), p->second.length(),
-          ::google::protobuf::internal::WireFormatLite::SERIALIZE,
-          "mydb.Response.TextResultEntry.value");
       }
     };
 
@@ -1416,7 +1415,7 @@ void Response::SerializeWithCachedSizes(
         entry.reset(text_result_.NewEntryWrapper(
             items[i]->first, items[i]->second));
         ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
-            3, *entry, output);
+            4, *entry, output);
         Utf8Check::Check(items[i]);
       }
     } else {
@@ -1427,15 +1426,10 @@ void Response::SerializeWithCachedSizes(
         entry.reset(text_result_.NewEntryWrapper(
             it->first, it->second));
         ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
-            3, *entry, output);
+            4, *entry, output);
         Utf8Check::Check(&*it);
       }
     }
-  }
-
-  // int64 long_result = 4;
-  if (this->long_result() != 0) {
-    ::google::protobuf::internal::WireFormatLite::WriteInt64(4, this->long_result(), output);
   }
 
   // @@protoc_insertion_point(serialize_end:mydb.Response)
@@ -1458,7 +1452,18 @@ void Response::SerializeWithCachedSizes(
     target = ::google::protobuf::internal::WireFormatLite::WriteBoolToArray(2, this->isstatusok(), target);
   }
 
-  // map<string, string> text_result = 3;
+  // string long_result = 3;
+  if (this->long_result().size() > 0) {
+    ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
+      this->long_result().data(), this->long_result().length(),
+      ::google::protobuf::internal::WireFormatLite::SERIALIZE,
+      "mydb.Response.long_result");
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        3, this->long_result(), target);
+  }
+
+  // map<string, bytes> text_result = 4;
   if (!this->text_result().empty()) {
     typedef ::google::protobuf::Map< ::std::string, ::std::string >::const_pointer
         ConstPtr;
@@ -1470,10 +1475,6 @@ void Response::SerializeWithCachedSizes(
           p->first.data(), p->first.length(),
           ::google::protobuf::internal::WireFormatLite::SERIALIZE,
           "mydb.Response.TextResultEntry.key");
-        ::google::protobuf::internal::WireFormatLite::VerifyUtf8String(
-          p->second.data(), p->second.length(),
-          ::google::protobuf::internal::WireFormatLite::SERIALIZE,
-          "mydb.Response.TextResultEntry.value");
       }
     };
 
@@ -1495,7 +1496,7 @@ void Response::SerializeWithCachedSizes(
             items[i]->first, items[i]->second));
         target = ::google::protobuf::internal::WireFormatLite::
                    InternalWriteMessageNoVirtualToArray(
-                       3, *entry, deterministic, target);
+                       4, *entry, deterministic, target);
 ;
         Utf8Check::Check(items[i]);
       }
@@ -1508,16 +1509,11 @@ void Response::SerializeWithCachedSizes(
             it->first, it->second));
         target = ::google::protobuf::internal::WireFormatLite::
                    InternalWriteMessageNoVirtualToArray(
-                       3, *entry, deterministic, target);
+                       4, *entry, deterministic, target);
 ;
         Utf8Check::Check(&*it);
       }
     }
-  }
-
-  // int64 long_result = 4;
-  if (this->long_result() != 0) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteInt64ToArray(4, this->long_result(), target);
   }
 
   // @@protoc_insertion_point(serialize_to_array_end:mydb.Response)
@@ -1528,7 +1524,7 @@ size_t Response::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:mydb.Response)
   size_t total_size = 0;
 
-  // map<string, string> text_result = 3;
+  // map<string, bytes> text_result = 4;
   total_size += 1 *
       ::google::protobuf::internal::FromIntSize(this->text_result_size());
   {
@@ -1542,6 +1538,13 @@ size_t Response::ByteSizeLong() const {
     }
   }
 
+  // string long_result = 3;
+  if (this->long_result().size() > 0) {
+    total_size += 1 +
+      ::google::protobuf::internal::WireFormatLite::StringSize(
+        this->long_result());
+  }
+
   // .mydb.Response.RESPONSE_TYPE type = 1;
   if (this->type() != 0) {
     total_size += 1 +
@@ -1551,13 +1554,6 @@ size_t Response::ByteSizeLong() const {
   // bool isStatusOk = 2;
   if (this->isstatusok() != 0) {
     total_size += 1 + 1;
-  }
-
-  // int64 long_result = 4;
-  if (this->long_result() != 0) {
-    total_size += 1 +
-      ::google::protobuf::internal::WireFormatLite::Int64Size(
-        this->long_result());
   }
 
   int cached_size = ::google::protobuf::internal::ToCachedSize(total_size);
@@ -1590,14 +1586,15 @@ void Response::MergeFrom(const Response& from) {
   (void) cached_has_bits;
 
   text_result_.MergeFrom(from.text_result_);
+  if (from.long_result().size() > 0) {
+
+    long_result_.AssignWithDefault(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), from.long_result_);
+  }
   if (from.type() != 0) {
     set_type(from.type());
   }
   if (from.isstatusok() != 0) {
     set_isstatusok(from.isstatusok());
-  }
-  if (from.long_result() != 0) {
-    set_long_result(from.long_result());
   }
 }
 
@@ -1625,9 +1622,9 @@ void Response::Swap(Response* other) {
 }
 void Response::InternalSwap(Response* other) {
   text_result_.Swap(&other->text_result_);
+  long_result_.Swap(&other->long_result_);
   std::swap(type_, other->type_);
   std::swap(isstatusok_, other->isstatusok_);
-  std::swap(long_result_, other->long_result_);
   std::swap(_cached_size_, other->_cached_size_);
 }
 
@@ -1667,7 +1664,60 @@ void Response::set_isstatusok(bool value) {
   // @@protoc_insertion_point(field_set:mydb.Response.isStatusOk)
 }
 
-// map<string, string> text_result = 3;
+// string long_result = 3;
+void Response::clear_long_result() {
+  long_result_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+const ::std::string& Response::long_result() const {
+  // @@protoc_insertion_point(field_get:mydb.Response.long_result)
+  return long_result_.GetNoArena();
+}
+void Response::set_long_result(const ::std::string& value) {
+  
+  long_result_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:mydb.Response.long_result)
+}
+#if LANG_CXX11
+void Response::set_long_result(::std::string&& value) {
+  
+  long_result_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:mydb.Response.long_result)
+}
+#endif
+void Response::set_long_result(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  long_result_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:mydb.Response.long_result)
+}
+void Response::set_long_result(const char* value, size_t size) {
+  
+  long_result_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:mydb.Response.long_result)
+}
+::std::string* Response::mutable_long_result() {
+  
+  // @@protoc_insertion_point(field_mutable:mydb.Response.long_result)
+  return long_result_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+::std::string* Response::release_long_result() {
+  // @@protoc_insertion_point(field_release:mydb.Response.long_result)
+  
+  return long_result_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+void Response::set_allocated_long_result(::std::string* long_result) {
+  if (long_result != NULL) {
+    
+  } else {
+    
+  }
+  long_result_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), long_result);
+  // @@protoc_insertion_point(field_set_allocated:mydb.Response.long_result)
+}
+
+// map<string, bytes> text_result = 4;
 int Response::text_result_size() const {
   return text_result_.size();
 }
@@ -1683,20 +1733,6 @@ Response::text_result() const {
 Response::mutable_text_result() {
   // @@protoc_insertion_point(field_mutable_map:mydb.Response.text_result)
   return text_result_.MutableMap();
-}
-
-// int64 long_result = 4;
-void Response::clear_long_result() {
-  long_result_ = GOOGLE_LONGLONG(0);
-}
-::google::protobuf::int64 Response::long_result() const {
-  // @@protoc_insertion_point(field_get:mydb.Response.long_result)
-  return long_result_;
-}
-void Response::set_long_result(::google::protobuf::int64 value) {
-  
-  long_result_ = value;
-  // @@protoc_insertion_point(field_set:mydb.Response.long_result)
 }
 
 #endif  // PROTOBUF_INLINE_NOT_IN_HEADERS

@@ -31,7 +31,8 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 
-#define TEXT_SIZE               3
+#define TEXT_SIZE               10
+#define FIELDS                  10
 
 #define MSG_EXIT_THREAD			1
 #define MSG_DELETE		        2
@@ -45,6 +46,7 @@
 
 #define PARTITIONS              3
 
+#define BUFFER_SIZE             512
 
 using boost::asio::local::stream_protocol;
 using namespace std;

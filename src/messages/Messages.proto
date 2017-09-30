@@ -16,9 +16,9 @@ message Request {
     string table = 2;
     string key = 3;
     repeated string fields = 4;
-    map<string, string> text_row = 5;
+    map<string, bytes> text_row = 5;
     string long_field = 6;
-    int64 long_row = 7;
+    sint64 long_row = 7;
 }
 
 message Response {
@@ -29,6 +29,6 @@ message Response {
     }
     RESPONSE_TYPE type = 1;
     bool isStatusOk = 2;
-    map<string, string> text_result = 3;
-    int64 long_result = 4;
+    string long_result = 3;
+    map<string, bytes> text_result = 4;
 }

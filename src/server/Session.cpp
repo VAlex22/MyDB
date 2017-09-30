@@ -4,7 +4,6 @@ template <size_t s>
 Session<Text, s>::Session(boost::asio::io_service& io_service, array<WorkerThread<Text, s>, PARTITIONS> *workers) :
         io_service_(io_service), socket_(io_service), workers(workers)
 {
-    wr = new WorkerRequest(io_service);
     cout<<"New Session"<<endl;
 }
 
@@ -99,28 +98,27 @@ void Session<Text, s>::handle_socket_read(const boost::system::error_code &error
         try {
             switch (request.type()) {
                 case mydb::Request_REQUEST_TYPE_DELETE : {
-                    wr->update(MSG_DELETE, request.key(), nullptr);
+
+                    WorkerRequest *wr = new WorkerRequest(io_service_, MSG_DELETE, request.key(), nullptr);
 
                     size_t partition = Hash_fn::get_partition(request.key());
                     (*workers)[partition].PostMsg(wr);
-                    wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_delete, this->shared_from_this(), boost::asio::placeholders::error));
+                    wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_delete, this->shared_from_this(), boost::asio::placeholders::error, wr));
                     break;
                 }
                 case mydb::Request_REQUEST_TYPE_INSERT_TEXT : {
-                    array<Text, s> ar;
+                    array<Text, s> *ar = new array<Text, s>;
 
                     const google::protobuf::Map<string, string> &m = request.text_row();
                     size_t partition = Hash_fn::get_partition(request.key());
-
                     for (auto i = m.begin(); i != m.end(); ++i) {
                         Text text = Text();
                         strcpy(text.x, i->second.c_str());
-                        ar[(*workers)[partition].p.fieldIndexes[i->first]] = text;
+                        (*ar)[(*workers)[partition].p.fieldIndexes[i->first]] = text;
                     }
-                    wr->update(MSG_INSERT_TEXT, request.key(), &ar);
+                    WorkerRequest *wr = new WorkerRequest(io_service_, MSG_INSERT_TEXT, request.key(), ar);
                     (*workers)[partition].PostMsg(wr);
-                    wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_insert, this->shared_from_this(), boost::asio::placeholders::error));
-
+                    wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_insert, this->shared_from_this(), boost::asio::placeholders::error, wr));
                     break;
                 }
 
@@ -128,20 +126,20 @@ void Session<Text, s>::handle_socket_read(const boost::system::error_code &error
                     const google::protobuf::RepeatedPtrField<string> &fields = request.fields();
                     size_t partition = Hash_fn::get_partition(request.key());
                     if (fields.empty()) {
-                        wr->update(MSG_READ_FULL_TEXT, request.key(), nullptr);
+                        WorkerRequest *wr = new WorkerRequest(io_service_, MSG_READ_FULL_TEXT, request.key(), nullptr);
                         //unique_lock<mutex> lock(wr->m);
                         //wr->cv.wait(lock);
                         (*workers)[partition].PostMsg(wr);
-                        wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_full_read, this->shared_from_this(), boost::asio::placeholders::error));
+                        wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_full_read, this->shared_from_this(), boost::asio::placeholders::error, wr));
 
                     } else {
-                        vector<string> v;
+                        vector<string> *v = new vector<string>;
                         for (auto i : fields) {
-                            v.push_back(i);
+                            v->push_back(i);
                         }
-                        wr->update(MSG_READ_PARTIAL_TEXT, request.key(), &v);
+                        WorkerRequest *wr = new WorkerRequest(io_service_, MSG_READ_PARTIAL_TEXT, request.key(), v);
                         (*workers)[partition].PostMsg(wr);
-                        wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_partial_read, this->shared_from_this(), boost::asio::placeholders::error));
+                        wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_partial_read, this->shared_from_this(), boost::asio::placeholders::error, wr));
                     }
 
                     break;
@@ -149,17 +147,17 @@ void Session<Text, s>::handle_socket_read(const boost::system::error_code &error
 
                 case mydb::Request_REQUEST_TYPE_UPDATE_TEXT : {
 
-                    unordered_map<string, Text> newData;
+                    unordered_map<string, Text> *newData = new unordered_map<string, Text>;
                     for (auto it : request.text_row()) {
                         Text text = Text();
                         strcpy(text.x, it.second.c_str());
 
-                        newData.insert({it.first, text});
+                        newData->insert({it.first, text});
                     }
-                    wr->update(MSG_UPDATE_TEXT, request.key(), &newData);
+                    WorkerRequest *wr = new WorkerRequest(io_service_, MSG_UPDATE_TEXT, request.key(), newData);
                     size_t partition = Hash_fn::get_partition(request.key());
                     (*workers)[partition].PostMsg(wr);
-                    wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_update, this->shared_from_this(), boost::asio::placeholders::error));
+                    wr->acv.async_wait(boost::bind(&Session<Text, s>::handle_update, this->shared_from_this(), boost::asio::placeholders::error, wr));
 
                     break;
                 }
@@ -189,7 +187,7 @@ void Session<Text, s>::handle_socket_read(const boost::system::error_code &error
             response.set_isstatusok(false);
 
             int size = response.ByteSize();
-            response.SerializeToArray(output, size);
+            response.SerializeToArray(output.c_array(), size);
             boost::asio::async_write(
                     socket_,
                     boost::asio::buffer(output, size),
@@ -201,14 +199,32 @@ void Session<Text, s>::handle_socket_read(const boost::system::error_code &error
 }
 
 template <size_t s>
-void Session<Text, s>::handle_insert(const boost::system::error_code& error) {
+void Session<Text, s>::handle_insert(const boost::system::error_code& error, WorkerRequest *wr) {
     bool status = (bool) wr->response;
     mydb::Response response;
     response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
     response.set_isstatusok(status);
-
+    delete wr;
     int size = response.ByteSize();
-    response.SerializeToArray(output, size);
+    response.SerializeToArray(output.c_array(), size);
+    boost::asio::async_write(
+            socket_,
+            boost::asio::buffer(output, size),
+            boost::bind(&Session<Text, s>::handle_socket_write, this->shared_from_this(),
+                        boost::asio::placeholders::error)
+    );
+
+}
+
+template <size_t s>
+void Session<Text, s>::handle_delete(const boost::system::error_code& error, WorkerRequest *wr) {
+    bool status = (bool) wr->response;
+    mydb::Response response;
+    response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
+    response.set_isstatusok(status);
+    delete wr;
+    int size = response.ByteSize();
+    response.SerializeToArray(output.c_array(), size);
     boost::asio::async_write(
             socket_,
             boost::asio::buffer(output, size),
@@ -218,32 +234,15 @@ void Session<Text, s>::handle_insert(const boost::system::error_code& error) {
 }
 
 template <size_t s>
-void Session<Text, s>::handle_delete(const boost::system::error_code& error) {
-    bool status = (bool) wr->response;
-    mydb::Response response;
-    response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
-    response.set_isstatusok(status);
-
-    int size = response.ByteSize();
-    response.SerializeToArray(output, size);
-    boost::asio::async_write(
-            socket_,
-            boost::asio::buffer(output, size),
-            boost::bind(&Session<Text, s>::handle_socket_write, this->shared_from_this(),
-                        boost::asio::placeholders::error)
-    );
-}
-
-template <size_t s>
-void Session<Text, s>::handle_full_read(const boost::system::error_code& error) {
+void Session<Text, s>::handle_full_read(const boost::system::error_code& error, WorkerRequest *wr) {
     mydb::Response response;
     if (wr->error)
     {
         response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
         response.set_isstatusok(false);
-
+        delete wr;
         int size = response.ByteSize();
-        response.SerializeToArray(output, size);
+        response.SerializeToArray(output.c_array(), size);
         boost::asio::async_write(
                 socket_,
                 boost::asio::buffer(output, size),
@@ -258,26 +257,31 @@ void Session<Text, s>::handle_full_read(const boost::system::error_code& error) 
         for (int i = 0; i < s; i++) {
             response.mutable_text_result()->insert({(*workers)[0].p.indexFields[i], string((*ar)[i].x)});
         }
+        delete ar;
+        delete wr;
         int size = response.ByteSize();
-        response.SerializeToArray(output, size);
+        response.SerializeToArray(output.c_array(), size);
         boost::asio::async_write(
                 socket_,
                 boost::asio::buffer(output, size),
                 boost::bind(&Session<Text, s>::handle_socket_write, this->shared_from_this(),
                             boost::asio::placeholders::error)
         );
+
+
     }
 }
 template <size_t s>
-void Session<Text, s>::handle_partial_read(const boost::system::error_code& error) {
+void Session<Text, s>::handle_partial_read(const boost::system::error_code& error, WorkerRequest *wr) {
     mydb::Response response;
     if (wr->error)
     {
         response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
         response.set_isstatusok(false);
+        delete wr;
 
         int size = response.ByteSize();
-        response.SerializeToArray(output, size);
+        response.SerializeToArray(output.c_array(), size);
         boost::asio::async_write(
                 socket_,
                 boost::asio::buffer(output, size),
@@ -293,7 +297,9 @@ void Session<Text, s>::handle_partial_read(const boost::system::error_code& erro
         }
 
         int size = response.ByteSize();
-        response.SerializeToArray(output, size);
+        response.SerializeToArray(output.c_array(), size);
+        delete res;
+        delete wr;
         boost::asio::async_write(
                 socket_,
                 boost::asio::buffer(output, size),
@@ -303,14 +309,14 @@ void Session<Text, s>::handle_partial_read(const boost::system::error_code& erro
     }
 }
 template <size_t s>
-void Session<Text, s>::handle_update(const boost::system::error_code& error) {
+void Session<Text, s>::handle_update(const boost::system::error_code& error, WorkerRequest *wr) {
     mydb::Response response;
     response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
     bool status = (bool) wr->response;
     response.set_isstatusok(status);
-
+    delete wr;
     int size = response.ByteSize();
-    response.SerializeToArray(output, size);
+    response.SerializeToArray(output.c_array(), size);
     boost::asio::async_write(
             socket_,
             boost::asio::buffer(output, size),
@@ -329,47 +335,47 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
 
         switch (request.type()) {
             case mydb::Request_REQUEST_TYPE_DELETE : {
-                wr->update(MSG_DELETE, request.key(), nullptr);
+                WorkerRequest *wr = new WorkerRequest(io_service_, MSG_DELETE, request.key(), nullptr);
                 size_t partition = Hash_fn::get_partition(request.key());
                 (*workers)[partition].PostMsg(wr);;
                 wr->acv.async_wait(boost::bind(&Session<long, s>::handle_delete, this->shared_from_this(),
-                                               boost::asio::placeholders::error));
+                                               boost::asio::placeholders::error, wr));
                 break;
             }
 
             case mydb::Request_REQUEST_TYPE_INSERT_LONG : {
 
-                array<long, s> ar;
-                ar[0] = request.long_row();
-                wr->update(MSG_DELETE, request.key(), &ar);
+                array<long, s> *ar = new array<long, s>;
+                (*ar)[0] = request.long_row();
+                WorkerRequest *wr = new WorkerRequest(io_service_, MSG_INSERT_LONG, request.key(), ar);
                 size_t partition = Hash_fn::get_partition(request.key());
                 (*workers)[partition].PostMsg(wr);
                 wr->acv.async_wait(boost::bind(&Session<long, s>::handle_insert, this->shared_from_this(),
-                                               boost::asio::placeholders::error));
+                                               boost::asio::placeholders::error, wr));
 
                 break;
             }
 
             case mydb::Request_REQUEST_TYPE_READ_LONG : {
 
-                wr->update(MSG_READ_LONG, request.key(), nullptr);
+                WorkerRequest *wr = new WorkerRequest(io_service_, MSG_READ_LONG, request.key(), nullptr);
 
                 size_t partition = Hash_fn::get_partition(request.key());
                 (*workers)[partition].PostMsg(wr);
                 wr->acv.async_wait(boost::bind(&Session<long, s>::handle_read, this->shared_from_this(),
-                                               boost::asio::placeholders::error));
+                                               boost::asio::placeholders::error, wr));
                 break;
             }
 
             case mydb::Request_REQUEST_TYPE_UPDATE_LONG : {
 
-                unordered_map<string, long> newData;
-                newData.insert({request.long_field(), request.long_row()});
-                wr->update(MSG_UPDATE_LONG, request.key(), &newData);
+                unordered_map<string, long> *newData = new unordered_map<string, long>;
+                newData->insert({request.long_field(), request.long_row()});
+                WorkerRequest *wr = new WorkerRequest(io_service_, MSG_UPDATE_LONG, request.key(), newData);
                 size_t partition = Hash_fn::get_partition(request.key());
                 (*workers)[partition].PostMsg(wr);
                 wr->acv.async_wait(boost::bind(&Session<long, s>::handle_update, this->shared_from_this(),
-                                               boost::asio::placeholders::error));
+                                               boost::asio::placeholders::error, wr));
                 break;
             }
             default : {
@@ -382,16 +388,15 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
 
 
 template <size_t s>
-void Session<long, s>::handle_insert(const boost::system::error_code& error) {
+void Session<long, s>::handle_insert(const boost::system::error_code& error, WorkerRequest *wr) {
     bool status = (bool) wr->response;
-
     mydb::Response response;
 
     response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
     response.set_isstatusok(status);
-
+    delete wr;
     int size = response.ByteSize();
-    response.SerializeToArray(output, size);
+    response.SerializeToArray(output.c_array(), size);
     boost::asio::async_write(
             socket_,
             boost::asio::buffer(output, size),
@@ -401,15 +406,15 @@ void Session<long, s>::handle_insert(const boost::system::error_code& error) {
 }
 
 template <size_t s>
-void Session<long, s>::handle_delete(const boost::system::error_code& error) {
+void Session<long, s>::handle_delete(const boost::system::error_code& error, WorkerRequest *wr) {
     bool status = (bool) wr->response;
 
     mydb::Response response;
     response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
     response.set_isstatusok(status);
-
+    delete wr;
     int size = response.ByteSize();
-    response.SerializeToArray(output, size);
+    response.SerializeToArray(output.c_array(), size);
     boost::asio::async_write(
             socket_,
             boost::asio::buffer(output, size),
@@ -419,14 +424,14 @@ void Session<long, s>::handle_delete(const boost::system::error_code& error) {
 }
 
 template <size_t s>
-void Session<long, s>::handle_read(const boost::system::error_code& error) {
+void Session<long, s>::handle_read(const boost::system::error_code& error, WorkerRequest *wr) {
     mydb::Response response;
     if (wr->error) {
         response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
         response.set_isstatusok(false);
-
+        delete wr;
         int size = response.ByteSize();
-        response.SerializeToArray(output, size);
+        response.SerializeToArray(output.c_array(), size);
         boost::asio::async_write(
                 socket_,
                 boost::asio::buffer(output, size),
@@ -438,11 +443,13 @@ void Session<long, s>::handle_read(const boost::system::error_code& error) {
         response.set_type(mydb::Response_RESPONSE_TYPE_READ_LONG);
 
         array<long, s> *ar = static_cast<array<long, s> *>(wr->response);
-        response.set_long_result((*ar)[0]);
+        response.set_long_result(to_string((*ar)[0]));
 
         int size = response.ByteSize();
-        cout << size << endl;
-        response.SerializeToArray(output, size);
+        response.SerializeToArray(output.c_array(), size);
+
+        delete ar;
+        delete wr;
         boost::asio::async_write(
                 socket_,
                 boost::asio::buffer(output, size),
@@ -453,14 +460,15 @@ void Session<long, s>::handle_read(const boost::system::error_code& error) {
 }
 
 template <size_t s>
-void Session<long, s>::handle_update(const boost::system::error_code& error) {
+void Session<long, s>::handle_update(const boost::system::error_code& error, WorkerRequest *wr) {
     mydb::Response response;
     response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
     bool status = (bool) wr->response;
     response.set_isstatusok(status);
 
+    delete wr;
     int size = response.ByteSize();
-    response.SerializeToArray(output, size);
+    response.SerializeToArray(output.c_array(), size);
     boost::asio::async_write(
             socket_,
             boost::asio::buffer(output, size),
@@ -470,5 +478,5 @@ void Session<long, s>::handle_update(const boost::system::error_code& error) {
 
 }
 
-template class Session<Text, 4>;
+template class Session<Text, FIELDS>;
 template class Session<long, 1>;

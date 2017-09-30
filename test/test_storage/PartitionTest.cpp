@@ -6,8 +6,8 @@ PartitionTest::PartitionTest()
 
     for (unsigned i = 0; i < NUMBER_OF_ROWS; i++)
     {
-        array<Text, NUMBER_OF_FIELDS1> array1;
-        for (int j = 0; j < NUMBER_OF_FIELDS1; j++)
+        array<Text, FIELDS> array1;
+        for (int j = 0; j < FIELDS; j++)
         {
             array1[j] = generateText();
         }
@@ -72,11 +72,11 @@ TEST_F(PartitionTest, UpdateTest)
     {
         string key = generateKey(rand() % NUMBER_OF_ROWS);
 
-        int n = rand() % (NUMBER_OF_FIELDS1 - 1) + 1;
+        int n = rand() % (FIELDS - 1) + 1;
         unordered_map<string, Text> newData;
         for (unsigned k = 0; k < n; k++)
         {
-            int index = rand() % NUMBER_OF_FIELDS1;
+            int index = rand() % FIELDS;
             Text t = generateText();
             newData["f"+to_string(index)] = t;
 
@@ -97,12 +97,12 @@ TEST_F(PartitionTest, ReadSomeFieldsTest)
     {
         string key = generateKey(i);
 
-        int n = rand() % (NUMBER_OF_FIELDS1 - 1) + 1;
+        int n = rand() % (FIELDS - 1) + 1;
         vector<string> fields;
         unordered_map<string, Text> expected;
         for (unsigned k = 0; k < n; k++)
         {
-            int index = rand() % NUMBER_OF_FIELDS1;
+            int index = rand() % FIELDS;
             string field = "f"+to_string(index);
             if (find(fields.begin(), fields.end(), field) == fields.end())
             {
@@ -130,7 +130,7 @@ TEST_F(PartitionTest, RemoveTest)
 TEST_F(PartitionTest, SerializationTest)
 {
     p1.serialize("file1");
-    Partition<Text, NUMBER_OF_FIELDS1> p1_("file1");
+    Partition<Text, FIELDS> p1_("file1");
     for (auto it : data1)
     {
         EXPECT_EQ(p1_.read(it.first), data1[it.first]);

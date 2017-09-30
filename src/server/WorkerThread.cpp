@@ -15,6 +15,13 @@ WorkerThread<long, s>::WorkerThread(const char* threadName, unsigned partitionSi
 }
 
 template <size_t s>
+WorkerThread<long, s>::WorkerThread(const char* threadName, unsigned partitionSize, unordered_map<string, unsigned> fieldIndexes) :
+        m_thread(0), THREAD_NAME(threadName), msgId(0), p(Partition<long, s>(partitionSize, fieldIndexes))
+{
+    m_thread = new thread(&WorkerThread::Process, this);
+}
+
+template <size_t s>
 WorkerThread<Text, s>::~WorkerThread()
 {
     if (!m_thread)
@@ -70,7 +77,6 @@ void WorkerThread<Text, s>::PostMsg(WorkerRequest* data)
 template <size_t s>
 void WorkerThread<long, s>::PostMsg(WorkerRequest* data)
 {
-    msgId++;
     std::unique_lock<std::mutex> lk(m_mutex);
     m_queue.push(data);
     m_cv.notify_one();
@@ -86,9 +92,9 @@ void WorkerThread<Text, s>::Process()
         {
             // Wait for a message to be added to the queue
             std::unique_lock<std::mutex> lk(m_mutex);
-            while (m_queue.empty())
+            while (m_queue.empty()) {
                 m_cv.wait(lk);
-
+            }
             if (m_queue.empty())
                 continue;
 
@@ -117,9 +123,11 @@ void WorkerThread<Text, s>::Process()
                     msg->acv.notify();
                     break;
                 }
+
                 case MSG_INSERT_TEXT: {
-                    array<Text, s> const *ar = static_cast<const array<Text, 4> *>(msg->data);
+                    array<Text, s> *ar = static_cast<array<Text, s> *>(msg->data);
                     bool status = p.insert(msg->key, *ar);
+                    delete ar;
                     msg->response = (void *) status;
                     msg->acv.notify();
                     break;
@@ -127,26 +135,32 @@ void WorkerThread<Text, s>::Process()
 
                 case MSG_UPDATE_TEXT: {
 
-                    unordered_map<string, Text> const *newData = static_cast<const unordered_map<string, Text> *>(msg->data);
+                    unordered_map<string, Text> *newData = static_cast<unordered_map<string, Text> *>(msg->data);
+
                     bool status = p.update(msg->key, *newData);
+                    delete newData;
                     msg->response = (void *) status;
                     msg->acv.notify();
+
                     break;
                 }
 
                 case MSG_READ_FULL_TEXT: {
 
-                    array<Text, s> ar = p.read(msg->key);
-                    msg->response = (void *) &ar;
+                    array<Text, s> *ar = new array<Text,s>;
+                    *ar = p.read(msg->key);
+                    msg->response = (void *) ar;
                     msg->acv.notify();
                     break;
                 }
 
                 case MSG_READ_PARTIAL_TEXT: {
+                    vector<string> *v = static_cast<vector<string> *>(msg->data);
 
-                    vector<string> const *v = static_cast<const vector<string> *>(msg->data);
-                    unordered_map<string, Text> res = p.read(msg->key, *v);
-                    msg->response = (void *) &res;
+                    unordered_map<string, Text> *res = new unordered_map<string, Text>;
+                            *res = p.read(msg->key, *v);
+                    delete v;
+                    msg->response = (void *) res;
                     msg->acv.notify();
                     break;
                 }
@@ -219,24 +233,27 @@ void WorkerThread<long, s>::Process() {
                 }
 
                 case MSG_INSERT_LONG: {
-                    array<long, s> const *ar = static_cast<const array<long, s> *>(msg->data);
+                    array<long, s> *ar = static_cast<array<long, s> *>(msg->data);
                     bool status = p.insert(msg->key, *ar);
+                    delete ar;
                     msg->response = (void *) status;
                     msg->acv.notify();
                     break;
                 }
 
                 case MSG_UPDATE_LONG: {
-                    unordered_map<string, long> const *newData = static_cast<const unordered_map<string, long> *>(msg->data);
+                    unordered_map<string, long> *newData = static_cast<unordered_map<string, long> *>(msg->data);
                     bool status = p.update(msg->key, *newData);
+                    delete newData;
                     msg->response = (void *) status;
                     msg->acv.notify();
                     break;
                 }
 
                 case MSG_READ_LONG: {
-                    array<long, s> ar = p.read(msg->key);
-                    msg->response = (void *) &ar;
+                    array<long, s> *ar = new array<long, s>;
+                    *ar = p.read(msg->key);
+                    msg->response = (void *) ar;
                     msg->acv.notify();
                     break;
                 }
@@ -267,18 +284,11 @@ void WorkerThread<long, s>::Process() {
     }
 }
 
-WorkerRequest::WorkerRequest(boost::asio::io_service & service) :
-        acv(service)
+WorkerRequest::WorkerRequest(boost::asio::io_service & service, int type, string key, void* data) :
+        acv(service), type(type), key(key), data(data), error(false)
 {
 }
 
-void WorkerRequest::update(int type_, string key_, void *data_) {
-    type = type_;
-    key = key_;
-    data = data_;
-    error = false;
-}
+template class WorkerThread<Text, FIELDS>;
 
-
-template class WorkerThread<Text, 4>;
 template class WorkerThread<long, 1>;

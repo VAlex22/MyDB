@@ -24,8 +24,8 @@ Partition<t, s>::Partition(unsigned size) : size(size), used(0) {
     rowsByKey.reserve(size / rowSize);
     for (unsigned i = 0; i < s; i++)
     {
-        fieldIndexes.insert({"f"+to_string(i),i});
-        indexFields.insert({i,"f"+to_string(i)});
+        fieldIndexes.insert({"field"+to_string(i),i});
+        indexFields.insert({i,"field"+to_string(i)});
     }
 }
 
@@ -117,6 +117,7 @@ unordered_map<string, t> Partition<t, s>::read(string key, vector<string> fields
         unordered_map<string, t> result;
         for (string field : fields)
         {
+
             auto index = fieldIndexes.find(field);
             if (index == fieldIndexes.end())
             {
@@ -136,6 +137,7 @@ array<t, s> Partition<t, s>::read(string key) {
     auto result = rowsByKey.find(key);
     if (result != rowsByKey.end())
     {
+
         return result->second;
     }
     else
@@ -159,8 +161,8 @@ bool Partition<t, s>::serialize(string file) {
     return true;
 }
 
-template class Partition<Text, 4>;
-template class Partition<Text, 10>;
+template class Partition<Text, FIELDS>;
+
 template class Partition<long, 1>;
 
 

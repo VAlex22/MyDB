@@ -240,7 +240,7 @@ class Request : public ::google::protobuf::Message /* @@protoc_insertion_point(c
   const ::google::protobuf::RepeatedPtrField< ::std::string>& fields() const;
   ::google::protobuf::RepeatedPtrField< ::std::string>* mutable_fields();
 
-  // map<string, string> text_row = 5;
+  // map<string, bytes> text_row = 5;
   int text_row_size() const;
   void clear_text_row();
   static const int kTextRowFieldNumber = 5;
@@ -291,7 +291,7 @@ class Request : public ::google::protobuf::Message /* @@protoc_insertion_point(c
   ::std::string* release_long_field();
   void set_allocated_long_field(::std::string* long_field);
 
-  // int64 long_row = 7;
+  // sint64 long_row = 7;
   void clear_long_row();
   static const int kLongRowFieldNumber = 7;
   ::google::protobuf::int64 long_row() const;
@@ -312,13 +312,13 @@ class Request : public ::google::protobuf::Message /* @@protoc_insertion_point(c
   class Request_TextRowEntry : public ::google::protobuf::internal::MapEntry<Request_TextRowEntry, 
       ::std::string, ::std::string,
       ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
-      ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
+      ::google::protobuf::internal::WireFormatLite::TYPE_BYTES,
       0 > {
   public:
     typedef ::google::protobuf::internal::MapEntry<Request_TextRowEntry, 
       ::std::string, ::std::string,
       ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
-      ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
+      ::google::protobuf::internal::WireFormatLite::TYPE_BYTES,
       0 > SuperType;
     Request_TextRowEntry();
     Request_TextRowEntry(::google::protobuf::Arena* arena);
@@ -331,7 +331,7 @@ class Request : public ::google::protobuf::Message /* @@protoc_insertion_point(c
       Request_TextRowEntry,
       ::std::string, ::std::string,
       ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
-      ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
+      ::google::protobuf::internal::WireFormatLite::TYPE_BYTES,
       0 > text_row_;
   private:
   ::google::protobuf::internal::ArenaStringPtr table_;
@@ -440,14 +440,28 @@ class Response : public ::google::protobuf::Message /* @@protoc_insertion_point(
 
   // accessors -------------------------------------------------------
 
-  // map<string, string> text_result = 3;
+  // map<string, bytes> text_result = 4;
   int text_result_size() const;
   void clear_text_result();
-  static const int kTextResultFieldNumber = 3;
+  static const int kTextResultFieldNumber = 4;
   const ::google::protobuf::Map< ::std::string, ::std::string >&
       text_result() const;
   ::google::protobuf::Map< ::std::string, ::std::string >*
       mutable_text_result();
+
+  // string long_result = 3;
+  void clear_long_result();
+  static const int kLongResultFieldNumber = 3;
+  const ::std::string& long_result() const;
+  void set_long_result(const ::std::string& value);
+  #if LANG_CXX11
+  void set_long_result(::std::string&& value);
+  #endif
+  void set_long_result(const char* value);
+  void set_long_result(const char* value, size_t size);
+  ::std::string* mutable_long_result();
+  ::std::string* release_long_result();
+  void set_allocated_long_result(::std::string* long_result);
 
   // .mydb.Response.RESPONSE_TYPE type = 1;
   void clear_type();
@@ -461,12 +475,6 @@ class Response : public ::google::protobuf::Message /* @@protoc_insertion_point(
   bool isstatusok() const;
   void set_isstatusok(bool value);
 
-  // int64 long_result = 4;
-  void clear_long_result();
-  static const int kLongResultFieldNumber = 4;
-  ::google::protobuf::int64 long_result() const;
-  void set_long_result(::google::protobuf::int64 value);
-
   // @@protoc_insertion_point(class_scope:mydb.Response)
  private:
 
@@ -475,13 +483,13 @@ class Response : public ::google::protobuf::Message /* @@protoc_insertion_point(
   class Response_TextResultEntry : public ::google::protobuf::internal::MapEntry<Response_TextResultEntry, 
       ::std::string, ::std::string,
       ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
-      ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
+      ::google::protobuf::internal::WireFormatLite::TYPE_BYTES,
       0 > {
   public:
     typedef ::google::protobuf::internal::MapEntry<Response_TextResultEntry, 
       ::std::string, ::std::string,
       ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
-      ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
+      ::google::protobuf::internal::WireFormatLite::TYPE_BYTES,
       0 > SuperType;
     Response_TextResultEntry();
     Response_TextResultEntry(::google::protobuf::Arena* arena);
@@ -494,12 +502,12 @@ class Response : public ::google::protobuf::Message /* @@protoc_insertion_point(
       Response_TextResultEntry,
       ::std::string, ::std::string,
       ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
-      ::google::protobuf::internal::WireFormatLite::TYPE_STRING,
+      ::google::protobuf::internal::WireFormatLite::TYPE_BYTES,
       0 > text_result_;
   private:
+  ::google::protobuf::internal::ArenaStringPtr long_result_;
   int type_;
   bool isstatusok_;
-  ::google::protobuf::int64 long_result_;
   mutable int _cached_size_;
   friend struct protobuf_src_2fmessages_2fMessages_2eproto::TableStruct;
 };
@@ -702,7 +710,7 @@ Request::mutable_fields() {
   return &fields_;
 }
 
-// map<string, string> text_row = 5;
+// map<string, bytes> text_row = 5;
 inline int Request::text_row_size() const {
   return text_row_.size();
 }
@@ -773,7 +781,7 @@ inline void Request::set_allocated_long_field(::std::string* long_field) {
   // @@protoc_insertion_point(field_set_allocated:mydb.Request.long_field)
 }
 
-// int64 long_row = 7;
+// sint64 long_row = 7;
 inline void Request::clear_long_row() {
   long_row_ = GOOGLE_LONGLONG(0);
 }
@@ -821,7 +829,60 @@ inline void Response::set_isstatusok(bool value) {
   // @@protoc_insertion_point(field_set:mydb.Response.isStatusOk)
 }
 
-// map<string, string> text_result = 3;
+// string long_result = 3;
+inline void Response::clear_long_result() {
+  long_result_.ClearToEmptyNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline const ::std::string& Response::long_result() const {
+  // @@protoc_insertion_point(field_get:mydb.Response.long_result)
+  return long_result_.GetNoArena();
+}
+inline void Response::set_long_result(const ::std::string& value) {
+  
+  long_result_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), value);
+  // @@protoc_insertion_point(field_set:mydb.Response.long_result)
+}
+#if LANG_CXX11
+inline void Response::set_long_result(::std::string&& value) {
+  
+  long_result_.SetNoArena(
+    &::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::move(value));
+  // @@protoc_insertion_point(field_set_rvalue:mydb.Response.long_result)
+}
+#endif
+inline void Response::set_long_result(const char* value) {
+  GOOGLE_DCHECK(value != NULL);
+  
+  long_result_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), ::std::string(value));
+  // @@protoc_insertion_point(field_set_char:mydb.Response.long_result)
+}
+inline void Response::set_long_result(const char* value, size_t size) {
+  
+  long_result_.SetNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(),
+      ::std::string(reinterpret_cast<const char*>(value), size));
+  // @@protoc_insertion_point(field_set_pointer:mydb.Response.long_result)
+}
+inline ::std::string* Response::mutable_long_result() {
+  
+  // @@protoc_insertion_point(field_mutable:mydb.Response.long_result)
+  return long_result_.MutableNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline ::std::string* Response::release_long_result() {
+  // @@protoc_insertion_point(field_release:mydb.Response.long_result)
+  
+  return long_result_.ReleaseNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+}
+inline void Response::set_allocated_long_result(::std::string* long_result) {
+  if (long_result != NULL) {
+    
+  } else {
+    
+  }
+  long_result_.SetAllocatedNoArena(&::google::protobuf::internal::GetEmptyStringAlreadyInited(), long_result);
+  // @@protoc_insertion_point(field_set_allocated:mydb.Response.long_result)
+}
+
+// map<string, bytes> text_result = 4;
 inline int Response::text_result_size() const {
   return text_result_.size();
 }
@@ -837,20 +898,6 @@ inline ::google::protobuf::Map< ::std::string, ::std::string >*
 Response::mutable_text_result() {
   // @@protoc_insertion_point(field_mutable_map:mydb.Response.text_result)
   return text_result_.MutableMap();
-}
-
-// int64 long_result = 4;
-inline void Response::clear_long_result() {
-  long_result_ = GOOGLE_LONGLONG(0);
-}
-inline ::google::protobuf::int64 Response::long_result() const {
-  // @@protoc_insertion_point(field_get:mydb.Response.long_result)
-  return long_result_;
-}
-inline void Response::set_long_result(::google::protobuf::int64 value) {
-  
-  long_result_ = value;
-  // @@protoc_insertion_point(field_set:mydb.Response.long_result)
 }
 
 #endif  // !PROTOBUF_INLINE_NOT_IN_HEADERS

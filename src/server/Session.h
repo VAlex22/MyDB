@@ -20,10 +20,9 @@ public:
 private:
     boost::asio::io_service& io_service_;
     stream_protocol::socket socket_;
-    boost::array<char, 1024> input;
-    char output[1024];
+    boost::array<char, BUFFER_SIZE> input;
+    boost::array<char, BUFFER_SIZE> output;
     array<WorkerThread<t, s>, PARTITIONS> *workers;
-    WorkerRequest *wr;
 };
 
 template <size_t s>
@@ -37,17 +36,16 @@ public:
     void handle_socket_write(const boost::system::error_code &error);
 
 private:
-    void handle_delete(const boost::system::error_code& error);
-    void handle_insert(const boost::system::error_code& error);
-    void handle_full_read(const boost::system::error_code& error);
-    void handle_partial_read(const boost::system::error_code& error);
-    void handle_update(const boost::system::error_code& error);
+    void handle_delete(const boost::system::error_code& error, WorkerRequest *wr);
+    void handle_insert(const boost::system::error_code& error, WorkerRequest *wr);
+    void handle_full_read(const boost::system::error_code& error, WorkerRequest *wr);
+    void handle_partial_read(const boost::system::error_code& error, WorkerRequest *wr);
+    void handle_update(const boost::system::error_code& error, WorkerRequest *wr);
     boost::asio::io_service& io_service_;
     stream_protocol::socket socket_;
-    boost::array<char, 1024> input;
-    char output[1024];
+    boost::array<char, BUFFER_SIZE> input;
+    boost::array<char, BUFFER_SIZE> output;
     array<WorkerThread<Text, s>, PARTITIONS> *workers;
-    WorkerRequest *wr;
 };
 
 template <size_t s>
@@ -58,19 +56,18 @@ public:
     stream_protocol::socket& socket();
     void start();
     void handle_socket_read(const boost::system::error_code &error, size_t bytes_transferred);
-    void handle_delete(const boost::system::error_code& error);
-    void handle_insert(const boost::system::error_code& error);
-    void handle_read(const boost::system::error_code& error);
-    void handle_update(const boost::system::error_code& error);
+    void handle_delete(const boost::system::error_code& error, WorkerRequest *wr);
+    void handle_insert(const boost::system::error_code& error, WorkerRequest *wr);
+    void handle_read(const boost::system::error_code& error, WorkerRequest *wr);
+    void handle_update(const boost::system::error_code& error, WorkerRequest *wr);
     void handle_socket_write(const boost::system::error_code &error);
 
 private:
     boost::asio::io_service& io_service_;
     stream_protocol::socket socket_;
-    boost::array<char, 1024> input;
-    char output[1024];
+    boost::array<char, BUFFER_SIZE> input;
+    boost::array<char, BUFFER_SIZE> output;
     array<WorkerThread<long, s>, PARTITIONS> *workers;
-    WorkerRequest *wr;
 };
 
 

@@ -42,5 +42,6 @@ void Server<t, s>::handle_accept(session_ptr<t, s> new_session, const boost::sys
     );
 }
 
-template class Server<Text, 4>;
+template class Server<Text, FIELDS>;
+template class Server<long, 1>;
 
