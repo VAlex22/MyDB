@@ -7,8 +7,10 @@
 
 struct WorkerRequest
 {
-    WorkerRequest(boost::asio::io_service & service, int type, string key, void* data);
+    WorkerRequest(boost::asio::io_service & service, int type, unsigned sessionId, string key, void* data);
+    WorkerRequest(boost::asio::io_service & service, int type, unsigned sessionId, size_t waiters, string key, void* data);
     int type;
+    unsigned sessionId;
     string key;
     void *data;
     AsyncConditionVariable acv;

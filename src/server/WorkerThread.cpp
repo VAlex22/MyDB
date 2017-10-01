@@ -137,7 +137,7 @@ void WorkerThread<Text, s>::Process()
 
                     unordered_map<string, Text> *newData = static_cast<unordered_map<string, Text> *>(msg->data);
 
-                    bool status = p.update(msg->key, *newData);
+                    bool status = p.update(msg->key, *newData, msg->sessionId);
                     delete newData;
                     msg->response = (void *) status;
                     msg->acv.notify();
@@ -148,7 +148,7 @@ void WorkerThread<Text, s>::Process()
                 case MSG_READ_FULL_TEXT: {
 
                     array<Text, s> *ar = new array<Text,s>;
-                    *ar = p.read(msg->key);
+                    *ar = p.read(msg->key, msg->sessionId);
                     msg->response = (void *) ar;
                     msg->acv.notify();
                     break;
@@ -243,7 +243,7 @@ void WorkerThread<long, s>::Process() {
 
                 case MSG_UPDATE_LONG: {
                     unordered_map<string, long> *newData = static_cast<unordered_map<string, long> *>(msg->data);
-                    bool status = p.update(msg->key, *newData);
+                    bool status = p.update(msg->key, *newData, msg->sessionId);
                     delete newData;
                     msg->response = (void *) status;
                     msg->acv.notify();
@@ -252,12 +252,33 @@ void WorkerThread<long, s>::Process() {
 
                 case MSG_READ_LONG: {
                     array<long, s> *ar = new array<long, s>;
-                    *ar = p.read(msg->key);
+                    *ar = p.read(msg->key, msg->sessionId);
                     msg->response = (void *) ar;
                     msg->acv.notify();
                     break;
                 }
+                case MSG_START_TRANSACTION: {
+                    p.startTransaction(msg->sessionId);
+                    msg->acv.notify();
+                    break;
+                }
+                case MSG_COMPUTE_TRANSACTION_TIMESTAMP: {
 
+                    break;
+                }
+                case MSG_VALIDATE_TRASACTION: {
+
+                    break;
+                }
+                case MSG_WRITE_TRANSACTION: {
+
+                    break;
+                }
+                case MSG_ABORT_TRANSACTION: {
+                    p.abort(msg->sessionId);
+                    msg->acv.notify();
+                    break;
+                }
                 default:
                     break;
             }
@@ -284,8 +305,14 @@ void WorkerThread<long, s>::Process() {
     }
 }
 
-WorkerRequest::WorkerRequest(boost::asio::io_service & service, int type, string key, void* data) :
-        acv(service), type(type), key(key), data(data), error(false)
+WorkerRequest::WorkerRequest(boost::asio::io_service & service, int type, unsigned sessionId, string key, void* data) :
+        acv(service), type(type), sessionId(sessionId), key(key), data(data), error(false)
+{
+}
+
+WorkerRequest::WorkerRequest(boost::asio::io_service &service, int type, unsigned sessionId, size_t waiters, string key,
+                             void *data) :
+        acv(service, waiters), type(type), sessionId(sessionId), key(key), data(data), error(false)
 {
 }
 

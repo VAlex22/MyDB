@@ -7,11 +7,13 @@ class AsyncConditionVariable {
 
 public:
     explicit
+    AsyncConditionVariable(boost::asio::io_service& io_service, size_t waiters);
+    explicit
     AsyncConditionVariable(boost::asio::io_service& io_service);
     template <typename WaitHandler>
     void async_wait(WaitHandler handler) {
         timer_.async_wait(handler);
-        if (notified)
+        if (waiters == 0)
         {
             timer_.cancel();
         }
@@ -19,7 +21,7 @@ public:
     void notify();
 
 private:
-    bool notified;
+    size_t waiters;
     boost::asio::deadline_timer timer_;
 };
 

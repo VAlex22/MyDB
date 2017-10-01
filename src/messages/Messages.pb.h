@@ -72,12 +72,15 @@ enum Request_REQUEST_TYPE {
   Request_REQUEST_TYPE_UPDATE_TEXT = 4,
   Request_REQUEST_TYPE_UPDATE_LONG = 5,
   Request_REQUEST_TYPE_DELETE = 6,
+  Request_REQUEST_TYPE_START_TRANSACTION = 7,
+  Request_REQUEST_TYPE_COMMIT = 8,
+  Request_REQUEST_TYPE_ABORT = 9,
   Request_REQUEST_TYPE_Request_REQUEST_TYPE_INT_MIN_SENTINEL_DO_NOT_USE_ = ::google::protobuf::kint32min,
   Request_REQUEST_TYPE_Request_REQUEST_TYPE_INT_MAX_SENTINEL_DO_NOT_USE_ = ::google::protobuf::kint32max
 };
 bool Request_REQUEST_TYPE_IsValid(int value);
 const Request_REQUEST_TYPE Request_REQUEST_TYPE_REQUEST_TYPE_MIN = Request_REQUEST_TYPE_INSERT_TEXT;
-const Request_REQUEST_TYPE Request_REQUEST_TYPE_REQUEST_TYPE_MAX = Request_REQUEST_TYPE_DELETE;
+const Request_REQUEST_TYPE Request_REQUEST_TYPE_REQUEST_TYPE_MAX = Request_REQUEST_TYPE_ABORT;
 const int Request_REQUEST_TYPE_REQUEST_TYPE_ARRAYSIZE = Request_REQUEST_TYPE_REQUEST_TYPE_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* Request_REQUEST_TYPE_descriptor();
@@ -195,6 +198,12 @@ class Request : public ::google::protobuf::Message /* @@protoc_insertion_point(c
     Request_REQUEST_TYPE_UPDATE_LONG;
   static const REQUEST_TYPE DELETE =
     Request_REQUEST_TYPE_DELETE;
+  static const REQUEST_TYPE START_TRANSACTION =
+    Request_REQUEST_TYPE_START_TRANSACTION;
+  static const REQUEST_TYPE COMMIT =
+    Request_REQUEST_TYPE_COMMIT;
+  static const REQUEST_TYPE ABORT =
+    Request_REQUEST_TYPE_ABORT;
   static inline bool REQUEST_TYPE_IsValid(int value) {
     return Request_REQUEST_TYPE_IsValid(value);
   }

@@ -7,6 +7,9 @@
 #include "../storage/Partition.h"
 #include "../utils/Hash_fn.h"
 
+/*
+ * Transaction support implemented only for long
+ */
 template <typename t, size_t s>
 class Session : public boost::enable_shared_from_this<Session<t,s>>
 {
@@ -18,6 +21,8 @@ public:
     void handle_socket_write(const boost::system::error_code &error);
 
 private:
+    static unsigned sessionCount;
+    unsigned sessionId;
     boost::asio::io_service& io_service_;
     stream_protocol::socket socket_;
     boost::array<char, BUFFER_SIZE> input;
@@ -36,11 +41,12 @@ public:
     void handle_socket_write(const boost::system::error_code &error);
 
 private:
-    void handle_delete(const boost::system::error_code& error, WorkerRequest *wr);
-    void handle_insert(const boost::system::error_code& error, WorkerRequest *wr);
+
+    static unsigned sessionCount;
+    unsigned sessionId;
+    void handle_status(const boost::system::error_code &error, WorkerRequest *wr);
     void handle_full_read(const boost::system::error_code& error, WorkerRequest *wr);
     void handle_partial_read(const boost::system::error_code& error, WorkerRequest *wr);
-    void handle_update(const boost::system::error_code& error, WorkerRequest *wr);
     boost::asio::io_service& io_service_;
     stream_protocol::socket socket_;
     boost::array<char, BUFFER_SIZE> input;
@@ -56,13 +62,18 @@ public:
     stream_protocol::socket& socket();
     void start();
     void handle_socket_read(const boost::system::error_code &error, size_t bytes_transferred);
-    void handle_delete(const boost::system::error_code& error, WorkerRequest *wr);
-    void handle_insert(const boost::system::error_code& error, WorkerRequest *wr);
-    void handle_read(const boost::system::error_code& error, WorkerRequest *wr);
-    void handle_update(const boost::system::error_code& error, WorkerRequest *wr);
     void handle_socket_write(const boost::system::error_code &error);
 
 private:
+    static unsigned sessionCount;
+    unsigned sessionId;
+    void handle_status(const boost::system::error_code &error, WorkerRequest *wr);
+    void handle_read(const boost::system::error_code& error, WorkerRequest *wr);
+    void handle_start_transaction(const boost::system::error_code& error, WorkerRequest *wr);
+    void handle_compute_timestamp(const boost::system::error_code& error, WorkerRequest *wr);
+    void handle_validate_transaction(const boost::system::error_code& error, WorkerRequest *wr);
+    void handle_write_transaction(const boost::system::error_code& error, WorkerRequest *wr);
+    void handle_abort_transaction(const boost::system::error_code& error, WorkerRequest *wr);
     boost::asio::io_service& io_service_;
     stream_protocol::socket socket_;
     boost::array<char, BUFFER_SIZE> input;

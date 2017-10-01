@@ -11,6 +11,9 @@ message Request {
         UPDATE_TEXT = 4;
         UPDATE_LONG = 5;
         DELETE = 6;
+        START_TRANSACTION = 7;
+        COMMIT = 8;
+        ABORT = 9;
     }
     REQUEST_TYPE type = 1;
     string table = 2;

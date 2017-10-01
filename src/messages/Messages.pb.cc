@@ -145,26 +145,27 @@ void InitDefaults() {
 void AddDescriptorsImpl() {
   InitDefaults();
   static const char descriptor[] = {
-      "\n\033src/messages/Messages.proto\022\004mydb\"\341\002\n\007"
+      "\n\033src/messages/Messages.proto\022\004mydb\"\220\003\n\007"
       "Request\022(\n\004type\030\001 \001(\0162\032.mydb.Request.REQ"
       "UEST_TYPE\022\r\n\005table\030\002 \001(\t\022\013\n\003key\030\003 \001(\t\022\016\n"
       "\006fields\030\004 \003(\t\022,\n\010text_row\030\005 \003(\0132\032.mydb.R"
       "equest.TextRowEntry\022\022\n\nlong_field\030\006 \001(\t\022"
       "\020\n\010long_row\030\007 \001(\022\032.\n\014TextRowEntry\022\013\n\003key"
-      "\030\001 \001(\t\022\r\n\005value\030\002 \001(\014:\0028\001\"|\n\014REQUEST_TYP"
-      "E\022\017\n\013INSERT_TEXT\020\000\022\017\n\013INSERT_LONG\020\001\022\r\n\tR"
-      "EAD_TEXT\020\002\022\r\n\tREAD_LONG\020\003\022\017\n\013UPDATE_TEXT"
-      "\020\004\022\017\n\013UPDATE_LONG\020\005\022\n\n\006DELETE\020\006\"\202\002\n\010Resp"
-      "onse\022*\n\004type\030\001 \001(\0162\034.mydb.Response.RESPO"
-      "NSE_TYPE\022\022\n\nisStatusOk\030\002 \001(\010\022\023\n\013long_res"
-      "ult\030\003 \001(\t\0223\n\013text_result\030\004 \003(\0132\036.mydb.Re"
-      "sponse.TextResultEntry\0321\n\017TextResultEntr"
-      "y\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\014:\0028\001\"9\n\rRES"
-      "PONSE_TYPE\022\r\n\tREAD_TEXT\020\000\022\r\n\tREAD_LONG\020\001"
-      "\022\n\n\006STATUS\020\002b\006proto3"
+      "\030\001 \001(\t\022\r\n\005value\030\002 \001(\014:\0028\001\"\252\001\n\014REQUEST_TY"
+      "PE\022\017\n\013INSERT_TEXT\020\000\022\017\n\013INSERT_LONG\020\001\022\r\n\t"
+      "READ_TEXT\020\002\022\r\n\tREAD_LONG\020\003\022\017\n\013UPDATE_TEX"
+      "T\020\004\022\017\n\013UPDATE_LONG\020\005\022\n\n\006DELETE\020\006\022\025\n\021STAR"
+      "T_TRANSACTION\020\007\022\n\n\006COMMIT\020\010\022\t\n\005ABORT\020\t\"\202"
+      "\002\n\010Response\022*\n\004type\030\001 \001(\0162\034.mydb.Respons"
+      "e.RESPONSE_TYPE\022\022\n\nisStatusOk\030\002 \001(\010\022\023\n\013l"
+      "ong_result\030\003 \001(\t\0223\n\013text_result\030\004 \003(\0132\036."
+      "mydb.Response.TextResultEntry\0321\n\017TextRes"
+      "ultEntry\022\013\n\003key\030\001 \001(\t\022\r\n\005value\030\002 \001(\014:\0028\001"
+      "\"9\n\rRESPONSE_TYPE\022\r\n\tREAD_TEXT\020\000\022\r\n\tREAD"
+      "_LONG\020\001\022\n\n\006STATUS\020\002b\006proto3"
   };
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-      descriptor, 660);
+      descriptor, 707);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "src/messages/Messages.proto", &protobuf_RegisterTypes);
   ::google::protobuf::internal::OnShutdown(&TableStruct::Shutdown);
@@ -196,6 +197,9 @@ bool Request_REQUEST_TYPE_IsValid(int value) {
     case 4:
     case 5:
     case 6:
+    case 7:
+    case 8:
+    case 9:
       return true;
     default:
       return false;
@@ -210,6 +214,9 @@ const Request_REQUEST_TYPE Request::READ_LONG;
 const Request_REQUEST_TYPE Request::UPDATE_TEXT;
 const Request_REQUEST_TYPE Request::UPDATE_LONG;
 const Request_REQUEST_TYPE Request::DELETE;
+const Request_REQUEST_TYPE Request::START_TRANSACTION;
+const Request_REQUEST_TYPE Request::COMMIT;
+const Request_REQUEST_TYPE Request::ABORT;
 const Request_REQUEST_TYPE Request::REQUEST_TYPE_MIN;
 const Request_REQUEST_TYPE Request::REQUEST_TYPE_MAX;
 const int Request::REQUEST_TYPE_ARRAYSIZE;
