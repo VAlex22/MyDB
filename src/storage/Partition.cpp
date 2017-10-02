@@ -220,14 +220,19 @@ unsigned Partition<t, s>::validateTransaction(unsigned session) {
             for (; it != transactionSets[session].begin(); --it)
             {
                 it->second.pointer->lock = false;
+                //cout<<it->first<<" unlocked by retriing"<<endl;
             }
             transactionSets[session].begin()->second.pointer->lock = false;
+            //cout<<transactionSets[session].begin()->first<<" unlocked by retriing"<<endl;
+
 
             throw LOCKED_EXCEPTION;
         }
         else
         {
             it->second.pointer->lock = true;
+            //cout<<it->first<<" locked by validating"<<endl;
+
         }
     }
     unsigned ts = 0;
@@ -259,9 +264,10 @@ bool Partition<t, s>::writeTransaction(unsigned session, unsigned commitTs) {
         it.second.pointer->fields = it.second.fields;
         it.second.pointer->timestamp = commitTs;
         it.second.pointer->lock = false;
+        //cout<<it.first<<" unlocked by commit"<<endl;
     }
 
-    transactionSets[session].clear();
+    transactionSets.erase(session);
     autoCommitBySession[session] = true;
     return true;
 }
@@ -271,8 +277,9 @@ void Partition<t, s>::abort(unsigned session) {
     for (auto row: transactionSets[session])
     {
         row.second.pointer->lock = false;
+        //cout<<row.first<<" unlocked by abort"<<endl;
     }
-    transactionSets[session].clear();
+    transactionSets.erase(session);
     autoCommitBySession[session] = true;
 }
 

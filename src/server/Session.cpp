@@ -323,7 +323,7 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
             }
 
             case mydb::Request_REQUEST_TYPE_READ_LONG : {
-
+                //cout<<"read request"<<endl;
                 WorkerRequest *wr = new WorkerRequest(io_service_, MSG_READ_LONG, sessionId, request.key(), nullptr);
 
                 size_t partition = Hash_fn::get_partition(request.key());
@@ -335,7 +335,7 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
             }
 
             case mydb::Request_REQUEST_TYPE_UPDATE_LONG : {
-
+                //cout<<"update request"<<endl;
                 unordered_map<string, long> *newData = new unordered_map<string, long>;
                 newData->insert({request.long_field(), request.long_row()});
                 WorkerRequest *wr = new WorkerRequest(io_service_, MSG_UPDATE_LONG, sessionId, request.key(), newData);
@@ -347,6 +347,7 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
                 break;
             }
             case mydb::Request_REQUEST_TYPE_START_TRANSACTION : {
+                //cout<<"start"<<endl;
                 WorkerRequest *wr = new WorkerRequest(io_service_, MSG_START_TRANSACTION, sessionId, PARTITIONS, request.key(), nullptr);
                 for (size_t partition = 0; partition < PARTITIONS; partition++)
                 {
@@ -357,6 +358,7 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
                 break;
             }
             case mydb::Request_REQUEST_TYPE_COMMIT : {
+                //cout<<"validate"<<endl;
                 WorkerRequest *wr = new WorkerRequest(io_service_, MSG_VALIDATE_TRANSACTION, sessionId, PARTITIONS, request.key(), nullptr);
                 wr->response = new array<unsigned, PARTITIONS>;
                 for (size_t partition = 0; partition < PARTITIONS; partition++)
@@ -444,6 +446,7 @@ void Session<long, s>::handle_read(const boost::system::error_code& error, Worke
 
 template <size_t s>
 void Session<long, s>::handle_validate_transaction(const boost::system::error_code &error, WorkerRequest *wr) {
+    //cout<<"write"<<endl;
     array<unsigned, PARTITIONS> *ar = static_cast<array<unsigned, PARTITIONS> *>(wr->response);
     bool abort = false;
     unsigned cts = 0;
@@ -459,13 +462,15 @@ void Session<long, s>::handle_validate_transaction(const boost::system::error_co
             cts = max(cts, (*ar)[i]);
         }
     }
-    cout<<endl;
+
+    delete ar;
+    delete wr;
+
     if (abort)
     {
         mydb::Response response;
         response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
         response.set_isstatusok(false);
-        delete wr;
         int size = response.ByteSize();
         response.SerializeToArray(output.c_array(), size);
         boost::asio::async_write(
@@ -477,7 +482,6 @@ void Session<long, s>::handle_validate_transaction(const boost::system::error_co
     }
     else
     {
-
         WorkerRequest *writewr = new WorkerRequest(io_service_, MSG_WRITE_TRANSACTION, sessionId, PARTITIONS, "",
                                                    &cts);
         for (size_t partition = 0; partition < PARTITIONS; partition++)
