@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
         unordered_map<string, unsigned> fieldIndexes;
         fieldIndexes["balance"] = 0;
         array<WorkerThread<long, 1>, PARTITIONS> workers = {
-                {WorkerThread<long, 1>("1", 1000, fieldIndexes), WorkerThread<long, 1>("2", 1000, fieldIndexes), WorkerThread<long, 1>("3", 1000, fieldIndexes)}
+                {WorkerThread<long, 1>(0, 1000, fieldIndexes), WorkerThread<long, 1>(1, 1000, fieldIndexes), WorkerThread<long, 1>(2, 1000, fieldIndexes)}
         };
 
 

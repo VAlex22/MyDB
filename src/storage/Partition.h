@@ -3,7 +3,7 @@
 #include "../global.h"
 #include "../utils/TimestampGenerator.h"
 /*
- * Transaction support implemented only for functions update(..) and read(..)
+ * Transaction support implemented not for all functions!!!
  */
 
 struct Text
@@ -16,27 +16,31 @@ struct Text
 };
 
 template <typename t, size_t s>
-class Partition {
-    struct Row {
-        Row(array<t, s> fields, unsigned timestamp);
-        array<t, s> fields;
-        unsigned timestamp;
-        pthread_rwlock_t* latch;
-    };
+struct Row {
+    Row(array<t, s> fields, unsigned timestamp);
+    array<t, s> fields;
+    unsigned timestamp;
+    bool lock;
+};
 
-    struct Tuple {
-        array<t, s> fields;
-        unsigned timestamp;
-        Row *pointer;
-    };
+template <typename t, size_t s>
+struct Tup {
+    Tup(array<t, s> fields, unsigned timestamp, Row<t, s> *pointer);
+    array<t, s> fields;
+    unsigned timestamp;
+    Row<t, s> *pointer;
+};
+
+template <typename t, size_t s>
+class Partition {
 
 private:
     unordered_map <unsigned, bool> autoCommitBySession;
     unsigned size; // size of values in partition
     unsigned used; // used size
     unsigned rowSize; // size of one row
-    unordered_map<string, Row> rowsByKey;
-    unordered_map<unsigned, map<string, Tuple>> transactionSets;
+    unordered_map<string, Row<t, s>> rowsByKey;
+    unordered_map<unsigned, map<string, Tup<t, s>>> transactionSets;
 
 public:
     unordered_map<string, unsigned> fieldIndexes;
@@ -46,12 +50,17 @@ public:
     Partition(unsigned size, unordered_map<string, unsigned> fieldIndexes);
     bool insert(string key, array<t,s> ar);
     unordered_map<string, t> read(string key, vector<string> fields); // read only specified fields
-    array<t,s> read(string key, unsigned session); // read whole row
-    bool update(string key, unordered_map<string,t> newData, unsigned session);
+
     bool remove(string key);
     bool serialize(string file);
+    /*
+    * Functions with transaction support!!!
+    */
+    array<t,s> read(string key, unsigned session); // read whole row
+    bool update(string key, unordered_map<string,t> newData, unsigned session);
     void startTransaction(unsigned session);
-    void commit(unsigned session);
+    unsigned validateTransaction(unsigned session);
+    bool writeTransaction(unsigned session, unsigned commitTs);
     void abort(unsigned session);
 };
 

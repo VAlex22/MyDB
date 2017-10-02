@@ -357,7 +357,8 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
                 break;
             }
             case mydb::Request_REQUEST_TYPE_COMMIT : {
-                WorkerRequest *wr = new WorkerRequest(io_service_, MSG_COMPUTE_TRANSACTION_TIMESTAMP, sessionId, PARTITIONS, request.key(), nullptr);
+                WorkerRequest *wr = new WorkerRequest(io_service_, MSG_VALIDATE_TRANSACTION, sessionId, PARTITIONS, request.key(), nullptr);
+                wr->response = new array<unsigned, PARTITIONS>;
                 for (size_t partition = 0; partition < PARTITIONS; partition++)
                 {
                     (*workers)[partition].PostMsg(wr);
@@ -441,20 +442,51 @@ void Session<long, s>::handle_read(const boost::system::error_code& error, Worke
     }
 }
 
-
 template <size_t s>
 void Session<long, s>::handle_validate_transaction(const boost::system::error_code &error, WorkerRequest *wr) {
+    array<unsigned, PARTITIONS> *ar = static_cast<array<unsigned, PARTITIONS> *>(wr->response);
+    bool abort = false;
+    unsigned cts = 0;
+    for (unsigned i = 0; i < PARTITIONS; i++)
+    {
+        if ((*ar)[i] == 0)
+        {
+            abort = true;
+            break;
+        }
+        else
+        {
+            cts = max(cts, (*ar)[i]);
+        }
+    }
+    cout<<endl;
+    if (abort)
+    {
+        mydb::Response response;
+        response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
+        response.set_isstatusok(false);
+        delete wr;
+        int size = response.ByteSize();
+        response.SerializeToArray(output.c_array(), size);
+        boost::asio::async_write(
+                socket_,
+                boost::asio::buffer(output, size),
+                boost::bind(&Session<long, s>::handle_socket_write, this->shared_from_this(),
+                            boost::asio::placeholders::error)
+        );
+    }
+    else
+    {
 
-}
-
-template <size_t s>
-void Session<long, s>::handle_write_transaction(const boost::system::error_code &error, WorkerRequest *wr) {
-
-}
-
-template <size_t s>
-void Session<long, s>::handle_abort_transaction(const boost::system::error_code &error, WorkerRequest *wr) {
-
+        WorkerRequest *writewr = new WorkerRequest(io_service_, MSG_WRITE_TRANSACTION, sessionId, PARTITIONS, "",
+                                                   &cts);
+        for (size_t partition = 0; partition < PARTITIONS; partition++)
+        {
+            (*workers)[partition].PostMsg(writewr);
+        }
+        wr->acv.async_wait(boost::bind(&Session<long, s>::handle_status, this->shared_from_this(),
+                                       boost::asio::placeholders::error, writewr));
+    }
 }
 
 template <size_t s>

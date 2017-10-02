@@ -1,22 +1,22 @@
 #include "WorkerThread.h"
 
 template <size_t s>
-WorkerThread<Text, s>::WorkerThread(const char* threadName, unsigned partitionSize) :
-        m_thread(0), THREAD_NAME(threadName), msgId(0), p(Partition<Text, s>(partitionSize))
+WorkerThread<Text, s>::WorkerThread(unsigned threadId, unsigned partitionSize) :
+        m_thread(0), threadId(threadId), msgId(0), p(Partition<Text, s>(partitionSize))
 {
     m_thread = new thread(&WorkerThread::Process, this);
 }
 
 template <size_t s>
-WorkerThread<long, s>::WorkerThread(const char* threadName, unsigned partitionSize) :
-        m_thread(0), THREAD_NAME(threadName), msgId(0), p(Partition<long, s>(partitionSize))
+WorkerThread<long, s>::WorkerThread(unsigned threadId, unsigned partitionSize) :
+        m_thread(0), threadId(threadId), msgId(0), p(Partition<long, s>(partitionSize))
 {
     m_thread = new thread(&WorkerThread::Process, this);
 }
 
 template <size_t s>
-WorkerThread<long, s>::WorkerThread(const char* threadName, unsigned partitionSize, unordered_map<string, unsigned> fieldIndexes) :
-        m_thread(0), THREAD_NAME(threadName), msgId(0), p(Partition<long, s>(partitionSize, fieldIndexes))
+WorkerThread<long, s>::WorkerThread(unsigned threadId, unsigned partitionSize, unordered_map<string, unsigned> fieldIndexes) :
+        m_thread(0), threadId(threadId), msgId(0), p(Partition<long, s>(partitionSize, fieldIndexes))
 {
     m_thread = new thread(&WorkerThread::Process, this);
 }
@@ -113,7 +113,7 @@ void WorkerThread<Text, s>::Process()
                         delete msg;
                     }
 
-                    cout << "Exit thread on " << THREAD_NAME << endl;
+                    cout << "Exit thread on " << threadId << endl;
                     return;
                 }
 
@@ -221,7 +221,7 @@ void WorkerThread<long, s>::Process() {
                         delete msg;
                     }
 
-                    cout << "Exit thread on " << THREAD_NAME << endl;
+                    cout << "Exit thread on " << threadId << endl;
                     return;
                 }
 
@@ -262,20 +262,23 @@ void WorkerThread<long, s>::Process() {
                     msg->acv.notify();
                     break;
                 }
-                case MSG_COMPUTE_TRANSACTION_TIMESTAMP: {
-
-                    break;
-                }
-                case MSG_VALIDATE_TRASACTION: {
-
+                case MSG_VALIDATE_TRANSACTION: {
+                    unsigned ts = p.validateTransaction(msg->sessionId);
+                    array<unsigned, PARTITIONS> *ar = static_cast<array<unsigned, PARTITIONS> *>(msg->response);
+                    (*ar)[threadId] = ts;
+                    msg->acv.notify();
                     break;
                 }
                 case MSG_WRITE_TRANSACTION: {
-
+                    unsigned *commitTimestamp = (unsigned int *) msg->data;
+                    bool status = p.writeTransaction(msg->sessionId, *commitTimestamp);
+                    msg->response = (void *) status;
+                    msg->acv.notify();
                     break;
                 }
                 case MSG_ABORT_TRANSACTION: {
                     p.abort(msg->sessionId);
+                    msg->response = (void *) true;
                     msg->acv.notify();
                     break;
                 }
@@ -292,6 +295,11 @@ void WorkerThread<long, s>::Process() {
                 case NO_SUCH_ENTRY_EXCEPTION: {
                     cout << "No such entry exception" << endl;
                     break;
+                }
+                case LOCKED_EXCEPTION: {
+                    cout << "Row locked, trying again, key: " << msg->key << endl;
+                    PostMsg(msg);
+
                 }
                 default: {
                     cout << "Unknown exception" << endl;
@@ -317,5 +325,4 @@ WorkerRequest::WorkerRequest(boost::asio::io_service &service, int type, unsigne
 }
 
 template class WorkerThread<Text, FIELDS>;
-
 template class WorkerThread<long, 1>;

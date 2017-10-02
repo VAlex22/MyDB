@@ -5,6 +5,16 @@ bool Text::operator==(const Text &a) const
     return (memcmp(a.x, x, TEXT_SIZE) == 0);
 }
 
+template <typename t, size_t s>
+Row<t, s>::Row(array<t, s> fields, unsigned timestamp) : fields(fields), timestamp(timestamp), lock(false)
+{
+}
+
+template <typename t, size_t s>
+Tup<t, s>::Tup(array<t, s> fields, unsigned timestamp, Row<t, s> *pointer) : fields(fields), timestamp(timestamp), pointer(pointer)
+{
+}
+
 template <typename Archive>
 void Text::serialize(Archive& ar, const unsigned int version)
 {
@@ -44,43 +54,13 @@ template <typename t, size_t s>
 Partition<t, s>::Partition(string file) {
     ifstream f(file);
     boost::archive::binary_iarchive archive(f);
-    archive>>rowsByKey;
+    //archive>>rowsByKey;
     archive>>fieldIndexes;
     archive>>indexFields;
     archive>>size;
     archive>>used;
     archive>>rowSize;
     f.close();
-}
-
-// update to transaction support
-template <typename t, size_t s>
-bool Partition<t, s>::update(string key, unordered_map<string, t> newData, unsigned session)
-{
-    auto ac = autoCommitBySession.find(session);
-    if (ac == autoCommitBySession.end())
-    {
-        autoCommitBySession[session] = false;
-    }
-    if (autoCommitBySession[session]) {
-        auto row = rowsByKey.find(key);
-        if (row == rowsByKey.end()) {
-            throw NO_SUCH_ENTRY_EXCEPTION;
-        } else {
-            for (auto field : newData) {
-                auto index = fieldIndexes.find(field.first);
-                if (index == fieldIndexes.end()) {
-                    throw INVALID_FIELD_EXCEPTION;
-                } else {
-                    row->second[index->second] = field.second;
-                }
-            }
-            return true;
-        }
-    } else
-    {
-        // update in working set
-    }
 }
 
 template <typename t, size_t s>
@@ -98,7 +78,7 @@ template <typename t, size_t s>
 bool Partition<t, s>::insert(string key, array<t, s> ar)
 {
 
-        Row row(ar, TimestampGenerator::currentTimestamp());
+        Row<t, s> row(ar, TimestampGenerator::currentTimestamp());
         auto p = rowsByKey.insert({key, row});
         if (!p.second) {
             p.first->second = row;
@@ -109,7 +89,6 @@ bool Partition<t, s>::insert(string key, array<t, s> ar)
 
 }
 
-// update to transaction support
 template <typename t, size_t s>
 unordered_map<string, t> Partition<t, s>::read(string key, vector<string> fields) {
 
@@ -118,6 +97,7 @@ unordered_map<string, t> Partition<t, s>::read(string key, vector<string> fields
         throw NO_SUCH_ENTRY_EXCEPTION;
 
     } else {
+
         unordered_map<string, t> result;
         for (string field : fields) {
 
@@ -133,29 +113,10 @@ unordered_map<string, t> Partition<t, s>::read(string key, vector<string> fields
 }
 
 template <typename t, size_t s>
-array<t, s> Partition<t, s>::read(string key, unsigned session) {
-    auto ac = autoCommitBySession.find(session);
-    if (ac == autoCommitBySession.end())
-    {
-        autoCommitBySession[session] = false;
-    }
-    if (!autoCommitBySession[session]) {
-        // copy to working set
-    }
-    auto result = rowsByKey.find(key);
-    if (result != rowsByKey.end()) {
-
-        return result->second.fields;
-    } else {
-        throw NO_SUCH_ENTRY_EXCEPTION;
-    }
-}
-
-template <typename t, size_t s>
 bool Partition<t, s>::serialize(string file) {
     ofstream f(file);
     boost::archive::binary_oarchive archive(f);
-    archive<<rowsByKey;
+    //archive<<rowsByKey;
     archive<<fieldIndexes;
     archive<<indexFields;
     archive<<size;
@@ -165,32 +126,160 @@ bool Partition<t, s>::serialize(string file) {
 
     return true;
 }
+/*
+ * Functions with transaction support!!!
+ */
 
 template <typename t, size_t s>
-void Partition::startTransaction(unsigned session) {
-    autoCommitBySession[session] = false;
+array<t, s> Partition<t, s>::read(string key, unsigned session) {
+    auto ac = autoCommitBySession.find(session);
+    if (ac == autoCommitBySession.end())
+    {
+        autoCommitBySession[session] = true;
+    }
+
+    auto res = transactionSets[session].find(key);
+    if (res == transactionSets[session].end())
+    {
+        auto result = rowsByKey.find(key);
+        if (result != rowsByKey.end()) {
+            if (!autoCommitBySession[session]) {
+                if (result->second.lock) {
+                    throw LOCKED_EXCEPTION;
+                } else {
+                    transactionSets[session].insert(
+                            {key, Tup<t, s>(result->second.fields, result->second.timestamp, &result->second)});
+                }
+            }
+
+            return result->second.fields;
+        } else {
+            throw NO_SUCH_ENTRY_EXCEPTION;
+        }
+    } else {
+        return res->second.fields;
+    }
 }
 
 template <typename t, size_t s>
-void Partition::commit(unsigned session) {
-
-    autoCommitBySession[session] = true;
-}
-
-template <typename t, size_t s>
-void Partition::abort(unsigned session) {
-
-    autoCommitBySession[session] = true;
-}
-
-template <typename t, size_t s>
-Partition::Row::Row(array<t, s> fields, unsigned timestamp) : fields(fields), timestamp(timestamp)
+bool Partition<t, s>::update(string key, unordered_map<string, t> newData, unsigned session)
 {
-    latch = new pthread_rwlock_t;
-    pthread_rwlock_init(latch, NULL);
+    auto ac = autoCommitBySession.find(session);
+    if (ac == autoCommitBySession.end())
+    {
+        autoCommitBySession[session] = true;
+    }
+    if (autoCommitBySession[session]) {
+        auto row = rowsByKey.find(key);
+        if (row == rowsByKey.end()) {
+            throw NO_SUCH_ENTRY_EXCEPTION;
+        } else {
+            for (auto field : newData) {
+                auto index = fieldIndexes.find(field.first);
+                if (index == fieldIndexes.end()) {
+                    throw INVALID_FIELD_EXCEPTION;
+                } else {
+                    row->second.fields[index->second] = field.second;
+                }
+            }
+            return true;
+        }
+    } else
+    {
+        auto row  = transactionSets[session].find(key);
+        if (row == transactionSets[session].end()) {
+            throw NO_SUCH_ENTRY_EXCEPTION;
+        } else {
+            for (auto field : newData) {
+                auto index = fieldIndexes.find(field.first);
+                if (index == fieldIndexes.end()) {
+                    throw INVALID_FIELD_EXCEPTION;
+                } else {
+                    row->second.fields[index->second] = field.second;
+                }
+            }
+            return true;
+        }
+    }
 }
 
-template class Partition<Text, FIELDS>;
+template <typename t, size_t s>
+void Partition<t, s>::startTransaction(unsigned session) {
+    autoCommitBySession[session] = false;
+    map<string, Tup<t, s>> transactionSet;
+    transactionSets[session] = transactionSet;
+}
 
+
+template <typename t, size_t s>
+unsigned Partition<t, s>::validateTransaction(unsigned session) {
+    for (auto it = transactionSets[session].begin(); it != transactionSets[session].end(); ++it)
+    {
+        if (it->second.pointer->lock)
+        {
+            for (; it != transactionSets[session].begin(); --it)
+            {
+                it->second.pointer->lock = false;
+            }
+            transactionSets[session].begin()->second.pointer->lock = false;
+
+            throw LOCKED_EXCEPTION;
+        }
+        else
+        {
+            it->second.pointer->lock = true;
+        }
+    }
+    unsigned ts = 0;
+    if (transactionSets[session].empty())
+    {
+        return 1;
+    }
+    for (auto it : transactionSets[session])
+    {
+        if (it.second.timestamp != it.second.pointer->timestamp)
+        {
+            return 0;
+        }
+    }
+
+    for (auto it : transactionSets[session])
+    {
+        ts = max(ts, it.second.timestamp + 1);
+    }
+
+
+    return ts;
+}
+
+template <typename t, size_t s>
+bool Partition<t, s>::writeTransaction(unsigned session, unsigned commitTs) {
+    for (auto it : transactionSets[session])
+    {
+        it.second.pointer->fields = it.second.fields;
+        it.second.pointer->timestamp = commitTs;
+        it.second.pointer->lock = false;
+    }
+
+    transactionSets[session].clear();
+    autoCommitBySession[session] = true;
+    return true;
+}
+
+template <typename t, size_t s>
+void Partition<t, s>::abort(unsigned session) {
+    for (auto row: transactionSets[session])
+    {
+        row.second.pointer->lock = false;
+    }
+    transactionSets[session].clear();
+    autoCommitBySession[session] = true;
+}
+
+template class Tup<long, 1>;
+template class Tup<Text, FIELDS>;
+template class Row<long, 1>;
+template class Row<Text, FIELDS>;
+template class Partition<Text, FIELDS>;
 template class Partition<long, 1>;
 

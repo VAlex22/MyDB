@@ -22,7 +22,7 @@ template <typename t, size_t s>
 class WorkerThread
 {
 public:
-    WorkerThread(const char* threadName, unsigned partitionSize);
+    WorkerThread(unsigned threadId, unsigned partitionSize);
     ~WorkerThread();
     void PostMsg(WorkerRequest* wr);
     Partition<t, s> p;
@@ -37,15 +37,14 @@ private:
     queue<WorkerRequest*> m_queue;
     mutex m_mutex;
     condition_variable m_cv;
-    const char* THREAD_NAME;
-
+    unsigned threadId;
 };
 
 template <size_t s>
 class WorkerThread<Text, s>
 {
 public:
-    WorkerThread(const char* threadName, unsigned partitionSize);
+    WorkerThread(unsigned threadId, unsigned partitionSize);
     ~WorkerThread();
     void PostMsg(WorkerRequest* wr);
     Partition<Text, s> p;
@@ -61,7 +60,7 @@ private:
     queue<WorkerRequest*> m_queue;
     mutex m_mutex;
     condition_variable m_cv;
-    const char* THREAD_NAME;
+    unsigned threadId;
 
 };
 
@@ -69,8 +68,8 @@ template <size_t s>
 class WorkerThread<long, s>
 {
 public:
-    WorkerThread(const char* threadName, unsigned partitionSize);
-    WorkerThread(const char* threadName, unsigned partitionSize, unordered_map<string, unsigned> fieldIndexes);
+    WorkerThread(unsigned threadId, unsigned partitionSize);
+    WorkerThread(unsigned threadId, unsigned partitionSize, unordered_map<string, unsigned> fieldIndexes);
     ~WorkerThread();
     void PostMsg(WorkerRequest* wr);
     Partition<long, s> p;
@@ -85,7 +84,7 @@ private:
     queue<WorkerRequest*> m_queue;
     mutex m_mutex;
     condition_variable m_cv;
-    const char* THREAD_NAME;
+    unsigned threadId;
 
 };
 
