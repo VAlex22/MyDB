@@ -12,16 +12,23 @@ public:
     AsyncConditionVariable(boost::asio::io_service& io_service);
     template <typename WaitHandler>
     void async_wait(WaitHandler handler) {
+        cout<<"wait"<<endl;
+
+        mtx.lock();
         timer_.async_wait(handler);
+        cout<<"waiters"<<waiters<<endl;
         if (waiters == 0)
         {
-            timer_.cancel();
+            timer_.cancel_one();
         }
+        mtx.unlock();
+        cout<<"wait unlock"<<endl;
     };
     void notify();
 
 private:
-    atomic<int> waiters;
+    mutex mtx;
+    int waiters;
     boost::asio::deadline_timer timer_;
 };
 

@@ -21,8 +21,8 @@ struct WorkerRequest
 
 struct LongWorkerRequest
 {
-    LongWorkerRequest(boost::asio::io_service & service, int type, unsigned sessionId, size_t waiters, string key, long value);
-    LongWorkerRequest(boost::asio::io_service & service, int type, unsigned sessionId, size_t waiters, unsigned cts);
+    LongWorkerRequest(boost::asio::io_service & service, int type, unsigned sessionId, int waiters, string key, long value);
+    LongWorkerRequest(boost::asio::io_service & service, int type, unsigned sessionId, int waiters, unsigned cts);
     AsyncConditionVariable acv;
     int type;
     unsigned sessionId;

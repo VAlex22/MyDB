@@ -319,14 +319,14 @@ WorkerRequest::WorkerRequest(boost::asio::io_service &service, int type, unsigne
 {
 }
 
-LongWorkerRequest::LongWorkerRequest(boost::asio::io_service &service, int type, unsigned sessionId, size_t waiters,
+LongWorkerRequest::LongWorkerRequest(boost::asio::io_service &service, int type, unsigned sessionId, int waiters,
                                      string key, long value) :
         acv(service, waiters), type(type), sessionId(sessionId), key(key), value(value), error(false)
 {
 
 }
 
-LongWorkerRequest::LongWorkerRequest(boost::asio::io_service &service, int type, unsigned sessionId, size_t waiters,
+LongWorkerRequest::LongWorkerRequest(boost::asio::io_service &service, int type, unsigned sessionId, int waiters,
                                      unsigned cts):
         acv(service, waiters), type(type), sessionId(sessionId), cts(cts), error(false)
 {

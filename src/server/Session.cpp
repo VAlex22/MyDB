@@ -330,6 +330,7 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
             }
 
             case mydb::Request_REQUEST_TYPE_UPDATE_LONG : {
+                cout<<"updating"<<endl;
                 LongWorkerRequest *wr = new LongWorkerRequest(io_service_, MSG_UPDATE_LONG, sessionId, 1, request.key(), request.long_row());
                 size_t partition = Hash_fn::get_partition(request.key());
                 (*workers)[partition].PostMsg(wr);
@@ -338,6 +339,8 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
                 break;
             }
             case mydb::Request_REQUEST_TYPE_START_TRANSACTION : {
+                cout<<"starting"<<endl;
+
                 LongWorkerRequest *wr = new LongWorkerRequest(io_service_, MSG_START_TRANSACTION, sessionId, PARTITIONS, request.key(), 0);
                 for (size_t partition = 0; partition < PARTITIONS; partition++)
                 {
@@ -348,6 +351,7 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
                 break;
             }
             case mydb::Request_REQUEST_TYPE_COMMIT : {
+                cout<<"commiting"<<endl;
                 LongWorkerRequest *wr = new LongWorkerRequest(io_service_, MSG_VALIDATE_TRANSACTION, sessionId, PARTITIONS, request.key(), 0);
                 for (size_t partition = 0; partition < PARTITIONS; partition++)
                 {
@@ -359,6 +363,7 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
                 break;
             }
             case mydb::Request_REQUEST_TYPE_ABORT : {
+                cout<<"aborting"<<endl;
                 LongWorkerRequest *wr = new LongWorkerRequest(io_service_, MSG_ABORT_TRANSACTION, sessionId, PARTITIONS, request.key(), 0);
                 for (size_t partition = 0; partition < PARTITIONS; partition++)
                 {
@@ -380,6 +385,7 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
 
 template <size_t s>
 void Session<long, s>::handle_status(const boost::system::error_code &error, LongWorkerRequest *wr) {
+    cout<<"end "<<wr->type<<endl;
     bool status = (bool) wr->error;
     mydb::Response response;
 
@@ -398,6 +404,7 @@ void Session<long, s>::handle_status(const boost::system::error_code &error, Lon
 
 template <size_t s>
 void Session<long, s>::handle_read(const boost::system::error_code& error, LongWorkerRequest *wr) {
+    cout<<"read"<<endl;
     mydb::Response response;
     if (wr->error) {
         response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
@@ -429,6 +436,7 @@ void Session<long, s>::handle_read(const boost::system::error_code& error, LongW
 
 template <size_t s>
 void Session<long, s>::handle_validate_transaction(const boost::system::error_code &error, LongWorkerRequest *wr) {
+    cout<<"validated"<<endl;
     bool abort = false;
     unsigned cts = 0;
     for (unsigned i = 0; i < PARTITIONS; i++)
