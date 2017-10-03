@@ -67,9 +67,9 @@ public:
 private:
     static unsigned sessionCount;
     unsigned sessionId;
-    void handle_status(const boost::system::error_code &error, WorkerRequest *wr);
-    void handle_read(const boost::system::error_code& error, WorkerRequest *wr);
-    void handle_validate_transaction(const boost::system::error_code &error, WorkerRequest *wr);
+    void handle_status(const boost::system::error_code &error, LongWorkerRequest *wr);
+    void handle_read(const boost::system::error_code& error, LongWorkerRequest *wr);
+    void handle_validate_transaction(const boost::system::error_code &error, LongWorkerRequest *wr);
     boost::asio::io_service& io_service_;
     stream_protocol::socket socket_;
     boost::array<char, BUFFER_SIZE> input;
