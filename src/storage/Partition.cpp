@@ -11,7 +11,7 @@ Row<t, s>::Row(array<t, s> fields, unsigned timestamp) : fields(fields), timesta
 }
 
 template <typename t, size_t s>
-Tup<t, s>::Tup(array<t, s> fields, unsigned timestamp, Row<t, s> *pointer) : fields(fields), timestamp(timestamp), pointer(pointer)
+Tup<t, s>::Tup(array<t, s> fields, unsigned timestamp, string key) : fields(fields), timestamp(timestamp), key(key)
 {
 }
 
@@ -146,9 +146,11 @@ array<t, s> Partition<t, s>::read(string key, unsigned session) {
             if (!autoCommitBySession[session]) {
                 if (result->second.lock) {
                     throw LOCKED_EXCEPTION;
-                } else {
+                }
+                else
+                {
                     transactionSets[session].insert(
-                            {key, Tup<t, s>(result->second.fields, result->second.timestamp, &result->second)});
+                            {key, Tup<t, s>(result->second.fields, result->second.timestamp, key)});
                 }
             }
 
@@ -215,22 +217,19 @@ template <typename t, size_t s>
 unsigned Partition<t, s>::validateTransaction(unsigned session) {
     for (auto it = transactionSets[session].begin(); it != transactionSets[session].end(); ++it)
     {
-        if (it->second.pointer->lock)
+        if (rowsByKey.at(it->second.key).lock)
         {
-            for (; it != transactionSets[session].begin(); --it)
+            for (auto it_ = transactionSets[session].begin(); it_ != it; ++it_)
             {
-                it->second.pointer->lock = false;
+                rowsByKey.at(it_->second.key).lock = false;
                 //cout<<it->first<<" unlocked by retriing"<<endl;
             }
-            transactionSets[session].begin()->second.pointer->lock = false;
-            //cout<<transactionSets[session].begin()->first<<" unlocked by retriing"<<endl;
-
 
             throw LOCKED_EXCEPTION;
         }
         else
         {
-            it->second.pointer->lock = true;
+            rowsByKey.at(it->second.key).lock = true;
             //cout<<it->first<<" locked by validating"<<endl;
 
         }
@@ -242,7 +241,7 @@ unsigned Partition<t, s>::validateTransaction(unsigned session) {
     }
     for (auto it : transactionSets[session])
     {
-        if (it.second.timestamp != it.second.pointer->timestamp)
+        if (it.second.timestamp != rowsByKey.at(it.second.key).timestamp)
         {
             return 0;
         }
@@ -261,9 +260,9 @@ template <typename t, size_t s>
 bool Partition<t, s>::writeTransaction(unsigned session, unsigned commitTs) {
     for (auto it : transactionSets[session])
     {
-        it.second.pointer->fields = it.second.fields;
-        it.second.pointer->timestamp = commitTs;
-        it.second.pointer->lock = false;
+        rowsByKey.at(it.second.key).fields = it.second.fields;
+        rowsByKey.at(it.second.key).timestamp = commitTs;
+        rowsByKey.at(it.second.key).lock = false;
         //cout<<it.first<<" unlocked by commit"<<endl;
     }
 
@@ -276,7 +275,7 @@ template <typename t, size_t s>
 void Partition<t, s>::abort(unsigned session) {
     for (auto row: transactionSets[session])
     {
-        row.second.pointer->lock = false;
+        rowsByKey.at(row.second.key).lock = false;
         //cout<<row.first<<" unlocked by abort"<<endl;
     }
     transactionSets.erase(session);

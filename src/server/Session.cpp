@@ -447,23 +447,22 @@ void Session<long, s>::handle_read(const boost::system::error_code& error, Worke
 template <size_t s>
 void Session<long, s>::handle_validate_transaction(const boost::system::error_code &error, WorkerRequest *wr) {
     //cout<<"write"<<endl;
-    array<unsigned, PARTITIONS> *ar = static_cast<array<unsigned, PARTITIONS> *>(wr->response);
     bool abort = false;
     unsigned cts = 0;
     for (unsigned i = 0; i < PARTITIONS; i++)
     {
-        if ((*ar)[i] == 0)
+        if (wr->tsar[i] == 0)
         {
             abort = true;
             break;
         }
         else
         {
-            cts = max(cts, (*ar)[i]);
+            cts = max(cts, wr->tsar[i]);
         }
     }
 
-    delete ar;
+
     delete wr;
 
     if (abort)

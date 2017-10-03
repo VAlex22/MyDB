@@ -243,8 +243,9 @@ void WorkerThread<long, s>::Process() {
 
                 case MSG_UPDATE_LONG: {
                     unordered_map<string, long> *newData = static_cast<unordered_map<string, long> *>(msg->data);
-                    bool status = p.update(msg->key, *newData, msg->sessionId);
+                    unordered_map<string, long> newData_ = *newData;
                     delete newData;
+                    bool status = p.update(msg->key, newData_, msg->sessionId);
                     msg->response = (void *) status;
                     msg->acv.notify();
                     break;
@@ -252,7 +253,13 @@ void WorkerThread<long, s>::Process() {
 
                 case MSG_READ_LONG: {
                     array<long, s> *ar = new array<long, s>;
-                    *ar = p.read(msg->key, msg->sessionId);
+                    try {
+                        *ar = p.read(msg->key, msg->sessionId);
+                    }
+                    catch (int er) {
+                        delete ar;
+                        throw er;
+                    }
                     msg->response = (void *) ar;
                     msg->acv.notify();
                     break;
@@ -264,14 +271,14 @@ void WorkerThread<long, s>::Process() {
                 }
                 case MSG_VALIDATE_TRANSACTION: {
                     unsigned ts = p.validateTransaction(msg->sessionId);
-                    array<unsigned, PARTITIONS> *ar = static_cast<array<unsigned, PARTITIONS> *>(msg->response);
-                    (*ar)[threadId] = ts;
+                    msg->tsar[threadId] = ts;
                     msg->acv.notify();
                     break;
                 }
                 case MSG_WRITE_TRANSACTION: {
-                    unsigned *commitTimestamp = (unsigned int *) msg->data;
+                    unsigned *commitTimestamp = static_cast<unsigned *>(msg->data);
                     bool status = p.writeTransaction(msg->sessionId, *commitTimestamp);
+                    //delete commitTimestamp;
                     msg->response = (void *) status;
                     msg->acv.notify();
                     break;
@@ -289,20 +296,21 @@ void WorkerThread<long, s>::Process() {
         } catch (int er) {
             switch (er) {
                 case INVALID_FIELD_EXCEPTION: {
-                    cout << "Invalid field exception" << endl;
+                    cout << "Invalid field exception" << msg->key <<" "<<msg->type<< endl;
                     break;
                 }
                 case NO_SUCH_ENTRY_EXCEPTION: {
-                    cout << "No such entry exception" << endl;
+                    cout << "No such entry exception" << msg->key <<" "<<msg->type<< endl;
                     break;
                 }
                 case LOCKED_EXCEPTION: {
-                    cout << "Row locked, trying again, key: " << msg->key << endl;
+                    cout << "Row locked, trying again, key: " << msg->key <<" "<<msg->type<<" "<< threadId<< endl;
                     PostMsg(msg);
+                    break;
 
                 }
                 default: {
-                    cout << "Unknown exception" << endl;
+                    cout << "Unknown exception " << endl;
                     break;
                 }
             }
@@ -313,7 +321,7 @@ void WorkerThread<long, s>::Process() {
     }
 }
 
-WorkerRequest::WorkerRequest(boost::asio::io_service & service, int type, unsigned sessionId, string key, void* data) :
+WorkerRequest::WorkerRequest(boost::asio::io_service & service, int type, unsigned sessionId, string key, void *data) :
         acv(service), type(type), sessionId(sessionId), key(key), data(data), error(false)
 {
 }

@@ -25,11 +25,11 @@ struct Row {
 
 template <typename t, size_t s>
 struct Tup {
-    Tup(array<t, s> fields, unsigned timestamp, Row<t, s> *pointer);
+    Tup(array<t, s> fields, unsigned timestamp, string key);
     ~Tup(){};
     array<t, s> fields;
     unsigned timestamp;
-    Row<t, s> *pointer;
+    string key;
 };
 
 template <typename t, size_t s>

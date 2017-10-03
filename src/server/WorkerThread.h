@@ -12,10 +12,12 @@ struct WorkerRequest
     int type;
     unsigned sessionId;
     string key;
-    void *data;
     AsyncConditionVariable acv;
     bool error=false;
+    void *data;
+
     void *response;
+    array<unsigned, PARTITIONS> tsar;
 };
 
 template <typename t, size_t s>
