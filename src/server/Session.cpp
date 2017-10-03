@@ -360,7 +360,6 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
             case mydb::Request_REQUEST_TYPE_COMMIT : {
                 //cout<<"validate"<<endl;
                 WorkerRequest *wr = new WorkerRequest(io_service_, MSG_VALIDATE_TRANSACTION, sessionId, PARTITIONS, request.key(), nullptr);
-                wr->response = new array<unsigned, PARTITIONS>;
                 for (size_t partition = 0; partition < PARTITIONS; partition++)
                 {
                     (*workers)[partition].PostMsg(wr);
