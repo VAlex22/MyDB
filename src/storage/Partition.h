@@ -20,7 +20,7 @@ struct Row {
     Row(array<t, s> fields, unsigned timestamp);
     array<t, s> fields;
     unsigned timestamp;
-    bool lock;
+    unsigned locker;
 };
 
 template <typename t, size_t s>
@@ -36,6 +36,7 @@ template <typename t, size_t s>
 class Partition {
 
 private:
+    int id;
     unordered_map <unsigned, bool> autoCommitBySession;
     unsigned size; // size of values in partition
     unsigned used; // used size
@@ -48,7 +49,7 @@ public:
     unordered_map<unsigned, string> indexFields;
     Partition(string file);
     Partition(unsigned size);
-    Partition(unsigned size, unordered_map<string, unsigned> fieldIndexes);
+    Partition(unsigned size, unordered_map<string, unsigned> fieldIndexes, int id);
     bool insert(string key, array<t,s> ar);
     unordered_map<string, t> read(string key, vector<string> fields); // read only specified fields
 
@@ -60,6 +61,8 @@ public:
     array<t,s> read(string key, unsigned session); // read whole row
     bool update(string key, unordered_map<string,t> newData, unsigned session);
     void startTransaction(unsigned session);
+    bool lockTransactionSet(unsigned session);
+    unsigned computeTransactionTimestamp(unsigned session);
     unsigned validateTransaction(unsigned session);
     bool writeTransaction(unsigned session, unsigned commitTs);
     void abort(unsigned session);

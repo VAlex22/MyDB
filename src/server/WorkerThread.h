@@ -86,6 +86,9 @@ private:
     queue<WorkerRequest*> m_queue;
     mutex m_mutex;
     condition_variable m_cv;
+
+    unordered_map<unsigned, queue<WorkerRequest*>> locked_msg;
+    unordered_map<unsigned, bool> lock_released;
     unsigned threadId;
 
 };

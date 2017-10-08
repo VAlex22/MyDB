@@ -65,10 +65,13 @@ public:
     void handle_socket_write(const boost::system::error_code &error);
 
 private:
+    unsigned commit_ts;
     static unsigned sessionCount;
     unsigned sessionId;
     void handle_status(const boost::system::error_code &error, WorkerRequest *wr);
     void handle_read(const boost::system::error_code& error, WorkerRequest *wr);
+    void handle_lock_transaction_set(const boost::system::error_code &error, WorkerRequest *wr);
+    void handle_compute_transaction_timestamp(const boost::system::error_code &error, WorkerRequest *wr);
     void handle_validate_transaction(const boost::system::error_code &error, WorkerRequest *wr);
     boost::asio::io_service& io_service_;
     stream_protocol::socket socket_;

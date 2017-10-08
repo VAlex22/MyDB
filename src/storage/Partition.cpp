@@ -6,7 +6,7 @@ bool Text::operator==(const Text &a) const
 }
 
 template <typename t, size_t s>
-Row<t, s>::Row(array<t, s> fields, unsigned timestamp) : fields(fields), timestamp(timestamp), lock(false)
+Row<t, s>::Row(array<t, s> fields, unsigned timestamp) : fields(fields), timestamp(timestamp), locker(0)
 {
 }
 
@@ -40,8 +40,8 @@ Partition<t, s>::Partition(unsigned size) : size(size), used(0) {
 }
 
 template <typename t, size_t s>
-Partition<t, s>::Partition(unsigned size, unordered_map<string, unsigned> fieldIndexes)
-        : size(size), used(0), fieldIndexes(fieldIndexes)
+Partition<t, s>::Partition(unsigned size, unordered_map<string, unsigned> fieldIndexes, int id)
+        : size(size), used(0), fieldIndexes(fieldIndexes), id(id)
 {
     rowSize = sizeof(array<t, s>);
     rowsByKey.reserve(size/rowSize);
@@ -144,8 +144,9 @@ array<t, s> Partition<t, s>::read(string key, unsigned session) {
         auto result = rowsByKey.find(key);
         if (result != rowsByKey.end()) {
             if (!autoCommitBySession[session]) {
-                if (result->second.lock) {
-                    throw LOCKED_EXCEPTION;
+                if (result->second.locker != 0) {
+                    int ex = -result->second.locker;
+                    throw ex;
                 }
                 else
                 {
@@ -212,60 +213,74 @@ void Partition<t, s>::startTransaction(unsigned session) {
     transactionSets[session] = transactionSet;
 }
 
-
 template <typename t, size_t s>
-unsigned Partition<t, s>::validateTransaction(unsigned session) {
-    for (auto it = transactionSets[session].begin(); it != transactionSets[session].end(); ++it)
+bool Partition<t, s>::lockTransactionSet(unsigned session) {
+    bool status = true;
+    for (auto it = transactionSets[session].begin(); it != transactionSets[session].end(); it++)
     {
-        if (rowsByKey.at(it->second.key).lock)
+        if (rowsByKey.at(it->second.key).locker != 0)
         {
-            for (auto it_ = transactionSets[session].begin(); it_ != it; ++it_)
+            for (auto it_ = transactionSets[session].begin(); it_ != it; it_++)
             {
-                rowsByKey.at(it_->second.key).lock = false;
-                //cout<<it->first<<" unlocked by retriing"<<endl;
+                rowsByKey.at(it_->second.key).locker = 0;
             }
-
-            throw LOCKED_EXCEPTION;
+            status = false;
+            break;
         }
         else
         {
-            rowsByKey.at(it->second.key).lock = true;
-            //cout<<it->first<<" locked by validating"<<endl;
+            rowsByKey.at(it->second.key).locker = session;
+        }
+    }
+    return status;
 
-        }
-    }
+};
+
+template <typename t, size_t s>
+unsigned Partition<t, s>::computeTransactionTimestamp(unsigned session) {
+
     unsigned ts = 0;
-    if (transactionSets[session].empty())
-    {
-        return 1;
-    }
-    for (auto it : transactionSets[session])
-    {
-        if (it.second.timestamp != rowsByKey.at(it.second.key).timestamp)
-        {
-            return 0;
-        }
-    }
 
     for (auto it : transactionSets[session])
     {
         ts = max(ts, it.second.timestamp + 1);
     }
 
-
     return ts;
+}
+
+
+template <typename t, size_t s>
+unsigned Partition<t, s>::validateTransaction(unsigned session) {
+
+    unsigned status = 1;
+
+    for (auto it : transactionSets[session])
+    {
+        if (it.second.timestamp != rowsByKey.at(it.second.key).timestamp)
+        {
+            status = 0;
+            break;
+        }
+    }
+
+    return status;
 }
 
 template <typename t, size_t s>
 bool Partition<t, s>::writeTransaction(unsigned session, unsigned commitTs) {
+    int i=0;
     for (auto it : transactionSets[session])
     {
+        i++;
         rowsByKey.at(it.second.key).fields = it.second.fields;
         rowsByKey.at(it.second.key).timestamp = commitTs;
-        rowsByKey.at(it.second.key).lock = false;
+        rowsByKey.at(it.second.key).locker = 0;
         //cout<<it.first<<" unlocked by commit"<<endl;
     }
 
+    string ss = string("unlocked partition ") + to_string(id)+ " session "+ to_string(session) +" " + to_string(i);
+    cout<<ss<<endl;
     transactionSets.erase(session);
     autoCommitBySession[session] = true;
     return true;
@@ -273,11 +288,16 @@ bool Partition<t, s>::writeTransaction(unsigned session, unsigned commitTs) {
 
 template <typename t, size_t s>
 void Partition<t, s>::abort(unsigned session) {
+    int i=0;
     for (auto row: transactionSets[session])
     {
-        rowsByKey.at(row.second.key).lock = false;
+        i++;
+        rowsByKey.at(row.second.key).locker = 0;
         //cout<<row.first<<" unlocked by abort"<<endl;
     }
+
+    string ss = string("unlocked ab partition ") + to_string(id)+ " session "+ to_string(session) +" " + to_string(i);
+    cout<<ss<<endl;
     transactionSets.erase(session);
     autoCommitBySession[session] = true;
 }
