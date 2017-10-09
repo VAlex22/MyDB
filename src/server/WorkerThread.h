@@ -9,8 +9,8 @@ struct WorkerRequest
 {
     WorkerRequest(boost::asio::io_service & service, int type, unsigned sessionId, string key, void* data);
     WorkerRequest(boost::asio::io_service & service, int type, unsigned sessionId, size_t waiters, string key, void* data);
-    int type;
-    unsigned sessionId;
+    const atomic_int type;
+    const atomic_int sessionId;
     string key;
     AsyncConditionVariable acv;
     bool error=false;
@@ -36,7 +36,7 @@ private:
 
     uint64_t msgId;
     thread* m_thread;
-    queue<WorkerRequest*> m_queue;
+    queue<WorkerRequest*> m_dequeue;
     mutex m_mutex;
     condition_variable m_cv;
     unsigned threadId;
@@ -83,12 +83,11 @@ private:
 
     uint64_t msgId;
     thread* m_thread;
-    queue<WorkerRequest*> m_queue;
+    deque<WorkerRequest*> m_deque;
     mutex m_mutex;
     condition_variable m_cv;
-
-    unordered_map<unsigned, queue<WorkerRequest*>> locked_msg;
-    unordered_map<unsigned, bool> lock_released;
+    void postLockedMessages(unsigned session);
+    unordered_map<unsigned, vector<WorkerRequest*>> locked_msg;
     unsigned threadId;
 
 };

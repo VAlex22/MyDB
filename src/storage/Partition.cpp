@@ -131,7 +131,7 @@ bool Partition<t, s>::serialize(string file) {
  */
 
 template <typename t, size_t s>
-array<t, s> Partition<t, s>::read(string key, unsigned session) {
+array<t, s> Partition<t, s>::read(string key, unsigned session, unsigned *locker) {
     auto ac = autoCommitBySession.find(session);
     if (ac == autoCommitBySession.end())
     {
@@ -145,8 +145,7 @@ array<t, s> Partition<t, s>::read(string key, unsigned session) {
         if (result != rowsByKey.end()) {
             if (!autoCommitBySession[session]) {
                 if (result->second.locker != 0) {
-                    int ex = -result->second.locker;
-                    throw ex;
+                    *locker = result->second.locker;
                 }
                 else
                 {
@@ -214,8 +213,8 @@ void Partition<t, s>::startTransaction(unsigned session) {
 }
 
 template <typename t, size_t s>
-bool Partition<t, s>::lockTransactionSet(unsigned session) {
-    bool status = true;
+unsigned Partition<t, s>::lockTransactionSet(unsigned session) {
+    unsigned locker = 0;
     for (auto it = transactionSets[session].begin(); it != transactionSets[session].end(); it++)
     {
         if (rowsByKey.at(it->second.key).locker != 0)
@@ -224,7 +223,7 @@ bool Partition<t, s>::lockTransactionSet(unsigned session) {
             {
                 rowsByKey.at(it_->second.key).locker = 0;
             }
-            status = false;
+            locker = rowsByKey.at(it->second.key).locker;
             break;
         }
         else
@@ -232,7 +231,7 @@ bool Partition<t, s>::lockTransactionSet(unsigned session) {
             rowsByKey.at(it->second.key).locker = session;
         }
     }
-    return status;
+    return locker;
 
 };
 
@@ -293,7 +292,6 @@ void Partition<t, s>::abort(unsigned session) {
     {
         i++;
         rowsByKey.at(row.second.key).locker = 0;
-        //cout<<row.first<<" unlocked by abort"<<endl;
     }
 
     string ss = string("unlocked ab partition ") + to_string(id)+ " session "+ to_string(session) +" " + to_string(i);

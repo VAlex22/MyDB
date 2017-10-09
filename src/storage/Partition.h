@@ -58,10 +58,10 @@ public:
     /*
     * Functions with transaction support!!!
     */
-    array<t,s> read(string key, unsigned session); // read whole row
+    array<t,s> read(string key, unsigned session, unsigned *locker); // read whole row
     bool update(string key, unordered_map<string,t> newData, unsigned session);
     void startTransaction(unsigned session);
-    bool lockTransactionSet(unsigned session);
+    unsigned lockTransactionSet(unsigned session);
     unsigned computeTransactionTimestamp(unsigned session);
     unsigned validateTransaction(unsigned session);
     bool writeTransaction(unsigned session, unsigned commitTs);

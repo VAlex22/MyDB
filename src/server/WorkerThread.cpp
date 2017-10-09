@@ -33,7 +33,7 @@ WorkerThread<Text, s>::~WorkerThread()
     // Put exit thread message into the queue
     {
         lock_guard<mutex> lock(m_mutex);
-      //  m_queue.push(request);
+      //  m_dequeue.push(request);
         m_cv.notify_one();
     }
 
@@ -54,7 +54,7 @@ WorkerThread<long, s>::~WorkerThread()
     // Put exit thread message into the queue
     {
         lock_guard<mutex> lock(m_mutex);
-        //m_queue.push(request);
+        //m_dequeue.push(request);
         m_cv.notify_one();
     }
 
@@ -78,7 +78,7 @@ template <size_t s>
 void WorkerThread<long, s>::PostMsg(WorkerRequest* data)
 {
     std::unique_lock<std::mutex> lk(m_mutex);
-    m_queue.push(data);
+    m_deque.push_back(data);
     m_cv.notify_one();
     return;
 }
@@ -148,7 +148,7 @@ void WorkerThread<Text, s>::Process()
                 case MSG_READ_FULL_TEXT: {
 
                     array<Text, s> *ar = new array<Text,s>;
-                    *ar = p.read(msg->key, msg->sessionId);
+                    *ar = p.read(msg->key, msg->sessionId, nullptr);
                     msg->response = (void *) ar;
                     msg->acv.notify();
                     break;
@@ -197,34 +197,17 @@ template <size_t s>
 void WorkerThread<long, s>::Process() {
     while (1) {
         WorkerRequest *msg;
-        bool readFromRetryQueue = false;
-        {
-            for (auto it: locked_msg)
-            {
-                if (lock_released[it.first] && !it.second.empty())
-                {
-                    string ss = string("retrying for session") + to_string(it.first);
-                    cout<<ss<<endl;
-                    readFromRetryQueue = true;
-                    msg = it.second.front();
-                    cout<<it.second.size()<<endl;
-                    it.second.pop();
-                    cout<<it.second.size()<<endl;
-                }
-            }
-        }
-        if (!readFromRetryQueue)
         {
             // Wait for a message to be added to the queue
             std::unique_lock<std::mutex> lk(m_mutex);
-            while (m_queue.empty())
+            while (m_deque.empty())
                 m_cv.wait(lk);
 
-            if (m_queue.empty())
+            if (m_deque.empty())
                 continue;
 
-            msg = m_queue.front();
-            m_queue.pop();
+            msg = m_deque.front();
+            m_deque.pop_front();
         }
         try {
             switch (msg->type) {
@@ -232,9 +215,9 @@ void WorkerThread<long, s>::Process() {
                 case MSG_EXIT_THREAD: {
                     delete msg;
                     std::unique_lock<std::mutex> lk(m_mutex);
-                    while (!m_queue.empty()) {
-                        msg = m_queue.front();
-                        m_queue.pop();
+                    while (!m_deque.empty()) {
+                        msg = m_deque.front();
+                        m_deque.pop_front();
                         delete msg;
                     }
 
@@ -262,8 +245,6 @@ void WorkerThread<long, s>::Process() {
                     unordered_map<string, long> *newData = static_cast<unordered_map<string, long> *>(msg->data);
                     unordered_map<string, long> newData_ = *newData;
                     delete newData;
-                    string ss = string("update for session") + to_string(msg->sessionId);
-                    cout<<ss<<endl;
 
                     bool status = p.update(msg->key, newData_, msg->sessionId);
                     msg->response = (void *) status;
@@ -272,78 +253,92 @@ void WorkerThread<long, s>::Process() {
                 }
 
                 case MSG_READ_LONG: {
-                    string ss = string("read for session") + to_string(msg->sessionId);
-                    cout<<ss<<endl;
                     array<long, s> *ar = new array<long, s>;
+                    unsigned *locker = new unsigned;
+                    *locker = 0;
+
                     try {
-                        *ar = p.read(msg->key, msg->sessionId);
+                        *ar = p.read(msg->key, msg->sessionId, locker);
+                        if (*locker > 0)
+                        {
+                            string ss = string("read locked by session ") + to_string(*locker) + string(" ") +to_string(msg->sessionId) + string(" ") +to_string(threadId);
+                            cout << ss << endl;
+                            locked_msg[*locker].push_back(msg);
+                            delete locker;
+                        }
+                        else
+                        {
+                            msg->response = (void *) ar;
+                            msg->acv.notify();
+                            delete locker;
+                        }
                     }
                     catch (int er) {
                         delete ar;
+                        delete locker;
                         throw er;
                     }
 
-                    msg->response = (void *) ar;
-                    msg->acv.notify();
+
                     break;
                 }
                 case MSG_START_TRANSACTION: {
-                    string ss = string("start for session") + to_string(msg->sessionId);
-                    cout<<ss<<endl;
+                    string ss = string("start for session ") + to_string(msg->sessionId) + string(" ") +to_string(threadId);
+                    cout << ss << endl;
                     p.startTransaction(msg->sessionId);
                     msg->acv.notify();
                     break;
                 }
                 case MSG_LOCK_TRANSACTION_SET: {
-                    string ss = string("lock for session") + to_string(msg->sessionId);
-                    cout<<ss<<endl;
-                    bool result = p.lockTransactionSet(msg->sessionId);
-                    if (result) {
+                    string ss = string("lock for session ") + to_string(msg->sessionId) + string(" ") +to_string(threadId);
+                    cout << ss << endl;
+                    unsigned locker = p.lockTransactionSet(msg->sessionId);
+                    if (locker == 0) {
                         msg->acv.notify();
-                    } else
-                    {
-                        //post message again
+                    } else {
+                        string ss = string("locking locked by session ") + to_string(locker) + string(" ") + to_string(msg->sessionId) + string(" ") +to_string(threadId);
+                        cout << ss << endl;
+                        locked_msg[locker].push_back(msg);
                     }
                     break;
                 }
                 case MSG_COMPUTE_TRANSACTION_TIMESTAMP: {
-                    string ss = string("lock for session") + to_string(msg->sessionId);
-                    cout<<ss<<endl;
+                    string ss = string("compute for session ") + to_string(msg->sessionId) + string(" ") +to_string(threadId);
+                    cout << ss << endl;
                     unsigned result = p.computeTransactionTimestamp(msg->sessionId);
                     msg->tsar[threadId] = result;
                     msg->acv.notify();
                     break;
                 }
                 case MSG_VALIDATE_TRANSACTION: {
-                    string ss = string("validate for session") + to_string(msg->sessionId);
-                    cout<<ss<<endl;
+                    string ss = string("validate for session ") + to_string(msg->sessionId) + string(" ") +to_string(threadId);
+                    cout << ss << endl;
                     unsigned ts = p.validateTransaction(msg->sessionId);
                     msg->tsar[threadId] = ts;
                     msg->acv.notify();
                     break;
                 }
                 case MSG_WRITE_TRANSACTION: {
-                    string ss = string("released write for session") + to_string(msg->sessionId);
-                    cout<<ss<<endl;
+                    string ss = string("released write for session ") + to_string(msg->sessionId) + string(" ") +to_string(threadId);
+                    cout << ss << endl;
                     unsigned *commitTimestamp = static_cast<unsigned *>(msg->data);
-                    bool status = p.writeTransaction(msg->sessionId, *commitTimestamp);
+                    unsigned ses = msg->sessionId;
+                    bool status = p.writeTransaction(ses, *commitTimestamp);
                     msg->response = (void *) status;
-                    string sss = string("released write for session") + to_string(msg->sessionId);
-                    cout<<sss<<endl;
-                    lock_released[msg->sessionId] = true;
+
+                    postLockedMessages(msg->sessionId);
                     msg->acv.notify();
                     break;
                 }
                 case MSG_ABORT_TRANSACTION: {
-                    string ss = string("released abort for session") + to_string(msg->sessionId);
-                    cout<<ss<<endl;
-                    p.abort(msg->sessionId);
+                    string ss = string("released abort for session ") + to_string(msg->sessionId) + string(" ") +to_string(threadId);
+                    cout << ss << endl;
+                    unsigned ses = msg->sessionId;
+
+                    p.abort(ses);
                     msg->response = (void *) true;
-                    string sss = string("released abort for session") + to_string(msg->sessionId);
-                    cout<<sss<<endl;
 
-                    lock_released[msg->sessionId] = true;
-
+                    postLockedMessages(msg->sessionId);
                     msg->acv.notify();
                     break;
                 }
@@ -352,49 +347,53 @@ void WorkerThread<long, s>::Process() {
             }
 
         } catch (int er) {
-            if (er < 0) {
-                string ss = string("Row locked by session ") + to_string(-er);
-                cout<< ss << endl;
-                //locked_msg[-er].push(msg);
-                //lock_released[-er] = false;
-                msg->response = (void *) false;
-                msg->error = true;
-                msg->acv.notify();
 
-            } else {
-                switch (er) {
-                    case INVALID_FIELD_EXCEPTION: {
-                        cout << "Invalid field exception" << msg->key << " " << msg->type << endl;
-                        msg->response = (void *) false;
-                        msg->error = true;
-                        msg->acv.notify();
-                        break;
-                    }
-                    case NO_SUCH_ENTRY_EXCEPTION: {
-                        cout << "No such entry exception" << msg->key << " " << msg->type << endl;
-                        msg->response = (void *) false;
-                        msg->error = true;
-                        msg->acv.notify();
-                        break;
-                    }
-                    case LOCKED_EXCEPTION: {
-                        //cout << "Row locked, trying again, key: " << msg->key <<" "<<msg->type<<" "<< threadId<< endl;
-                        PostMsg(msg);
-                        break;
+            switch (er) {
+                case INVALID_FIELD_EXCEPTION: {
+                    cout << "Invalid field exception" << msg->key << " " << msg->type << endl;
+                    msg->response = (void *) false;
+                    msg->error = true;
+                    msg->acv.notify();
+                    break;
+                }
+                case NO_SUCH_ENTRY_EXCEPTION: {
+                    cout << "No such entry exception" << msg->key << " " << msg->type << endl;
+                    msg->response = (void *) false;
+                    msg->error = true;
+                    msg->acv.notify();
+                    break;
+                }
+                case LOCKED_EXCEPTION: {
+                    //cout << "Row locked, trying again, key: " << msg->key <<" "<<msg->type<<" "<< threadId<< endl;
+                    PostMsg(msg);
+                    break;
 
-                    }
-                    default: {
-                        cout << "Unknown exception " << endl;
-                        msg->response = (void *) false;
-                        msg->error = true;
-                        msg->acv.notify();
-                        break;
-                    }
+                }
+                default: {
+                    cout << "Unknown exception " << endl;
+                    msg->response = (void *) false;
+                    msg->error = true;
+                    msg->acv.notify();
+                    break;
                 }
             }
         }
     }
 }
+
+template <size_t s>
+void WorkerThread<long, s>::postLockedMessages(unsigned session) {
+    string ss = string("posting locked for session ") + to_string(session) + string(" ") +to_string(threadId);
+    cout << ss << endl;
+
+    for (auto rit = locked_msg[session].rbegin(); rit!= locked_msg[session].rend(); ++rit)
+    {
+        std::unique_lock<std::mutex> lk(m_mutex);
+        m_deque.push_front(*rit);
+        m_cv.notify_one();
+    }
+};
+
 
 WorkerRequest::WorkerRequest(boost::asio::io_service & service, int type, unsigned sessionId, string key, void *data) :
         acv(service), type(type), sessionId(sessionId), key(key), data(data), error(false)

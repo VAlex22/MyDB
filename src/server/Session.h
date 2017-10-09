@@ -67,7 +67,7 @@ public:
 private:
     unsigned commit_ts;
     static unsigned sessionCount;
-    unsigned sessionId;
+    const unsigned sessionId;
     void handle_status(const boost::system::error_code &error, WorkerRequest *wr);
     void handle_read(const boost::system::error_code& error, WorkerRequest *wr);
     void handle_lock_transaction_set(const boost::system::error_code &error, WorkerRequest *wr);

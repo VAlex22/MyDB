@@ -501,6 +501,7 @@ void Session<long, s>::handle_validate_transaction(const boost::system::error_co
                                                    &commit_ts);
         for (size_t partition = 0; partition < PARTITIONS; partition++)
         {
+            cout<<"posting write"<<endl;
             (*workers)[partition].PostMsg(writewr);
         }
         wr->acv.async_wait(boost::bind(&Session<long, s>::handle_status, this->shared_from_this(),
