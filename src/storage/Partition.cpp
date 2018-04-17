@@ -144,10 +144,10 @@ array<t, s> Partition<t, s>::read(string key, unsigned session, unsigned *locker
         auto result = rowsByKey.find(key);
         if (result != rowsByKey.end()) {
             if (!autoCommitBySession[session]) {
-                if (result->second.locker != 0) {
-                    *locker = result->second.locker;
-                }
-                else
+                //if (result->second.locker != 0) {
+                    //*locker = result->second.locker;
+                //}
+                //else
                 {
                     transactionSets[session].insert(
                             {key, Tup<t, s>(result->second.fields, result->second.timestamp, key)});
@@ -217,16 +217,16 @@ unsigned Partition<t, s>::lockTransactionSet(unsigned session) {
     unsigned locker = 0;
     for (auto it = transactionSets[session].begin(); it != transactionSets[session].end(); it++)
     {
-        if (rowsByKey.at(it->second.key).locker != 0)
+        /*if (rowsByKey.at(it->second.key).locker != 0)
         {
             for (auto it_ = transactionSets[session].begin(); it_ != it; it_++)
             {
                 rowsByKey.at(it_->second.key).locker = 0;
             }
-            locker = rowsByKey.at(it->second.key).locker;
+            //locker = rowsByKey.at(it->second.key).locker;
             break;
         }
-        else
+        else*/
         {
             rowsByKey.at(it->second.key).locker = session;
         }

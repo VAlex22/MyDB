@@ -52,7 +52,7 @@
 #define MSG_ABORT_TRANSACTION               15
 
 
-#define PARTITIONS                          3
+#define PARTITIONS                          1
 #define BUFFER_SIZE                         512
 
 using boost::asio::local::stream_protocol;

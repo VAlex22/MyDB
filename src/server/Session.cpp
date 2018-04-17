@@ -301,7 +301,7 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
 
         switch (request.type()) {
             case mydb::Request_REQUEST_TYPE_DELETE : {
-                WorkerRequest *wr = new WorkerRequest(io_service_, MSG_DELETE, sessionId, request.key(), nullptr);
+                LongWorkerRequest *wr = new LongWorkerRequest(io_service_, MSG_DELETE, sessionId, 1, request.key(), 0);
                 size_t partition = Hash_fn::get_partition(request.key());
                 (*workers)[partition].PostMsg(wr);;
                 wr->acv.async_wait(boost::bind(&Session<long, s>::handle_status, this->shared_from_this(),
@@ -310,10 +310,7 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
             }
 
             case mydb::Request_REQUEST_TYPE_INSERT_LONG : {
-
-                array<long, s> *ar = new array<long, s>;
-                (*ar)[0] = request.long_row();
-                WorkerRequest *wr = new WorkerRequest(io_service_, MSG_INSERT_LONG, sessionId, request.key(), ar);
+                LongWorkerRequest *wr = new LongWorkerRequest(io_service_, MSG_INSERT_LONG, sessionId, 1, request.key(), request.long_row());
                 size_t partition = Hash_fn::get_partition(request.key());
                 (*workers)[partition].PostMsg(wr);
                 wr->acv.async_wait(boost::bind(&Session<long, s>::handle_status, this->shared_from_this(),
@@ -323,11 +320,9 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
             }
 
             case mydb::Request_REQUEST_TYPE_READ_LONG : {
-                //cout<<"read request"<<endl;
-                WorkerRequest *wr = new WorkerRequest(io_service_, MSG_READ_LONG, sessionId, request.key(), nullptr);
-
+                cout<<"reading"<<endl;
+                LongWorkerRequest *wr = new LongWorkerRequest(io_service_, MSG_READ_LONG, sessionId, 1, request.key(), 0);
                 size_t partition = Hash_fn::get_partition(request.key());
-
                 (*workers)[partition].PostMsg(wr);
                 wr->acv.async_wait(boost::bind(&Session<long, s>::handle_read, this->shared_from_this(),
                                                boost::asio::placeholders::error, wr));
@@ -335,20 +330,23 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
             }
 
             case mydb::Request_REQUEST_TYPE_UPDATE_LONG : {
-                //cout<<"update request"<<endl;
-                unordered_map<string, long> *newData = new unordered_map<string, long>;
-                newData->insert({request.long_field(), request.long_row()});
-                WorkerRequest *wr = new WorkerRequest(io_service_, MSG_UPDATE_LONG, sessionId, request.key(), newData);
+                cout<<"updating"<<endl;
+                LongWorkerRequest *wr = new LongWorkerRequest(io_service_, MSG_UPDATE_LONG, sessionId, 1, request.key(), request.long_row());
                 size_t partition = Hash_fn::get_partition(request.key());
-
                 (*workers)[partition].PostMsg(wr);
                 wr->acv.async_wait(boost::bind(&Session<long, s>::handle_status, this->shared_from_this(),
                                                boost::asio::placeholders::error, wr));
                 break;
             }
             case mydb::Request_REQUEST_TYPE_START_TRANSACTION : {
+<<<<<<< HEAD
                 //cout<<"start"<<endl;
                 WorkerRequest *wr = new WorkerRequest(io_service_, MSG_START_TRANSACTION, sessionId, PARTITIONS, "", nullptr);
+=======
+                cout<<"starting"<<endl;
+
+                LongWorkerRequest *wr = new LongWorkerRequest(io_service_, MSG_START_TRANSACTION, sessionId, PARTITIONS, request.key(), 0);
+>>>>>>> 59f9b43f45aac6daee0628924a8603a32b274a7d
                 for (size_t partition = 0; partition < PARTITIONS; partition++)
                 {
                     (*workers)[partition].PostMsg(wr);
@@ -358,7 +356,12 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
                 break;
             }
             case mydb::Request_REQUEST_TYPE_COMMIT : {
+<<<<<<< HEAD
                 WorkerRequest *wr = new WorkerRequest(io_service_, MSG_LOCK_TRANSACTION_SET, sessionId, PARTITIONS, "", nullptr);
+=======
+                cout<<"commiting"<<endl;
+                LongWorkerRequest *wr = new LongWorkerRequest(io_service_, MSG_VALIDATE_TRANSACTION, sessionId, PARTITIONS, request.key(), 0);
+>>>>>>> 59f9b43f45aac6daee0628924a8603a32b274a7d
                 for (size_t partition = 0; partition < PARTITIONS; partition++)
                 {
                     (*workers)[partition].PostMsg(wr);
@@ -369,7 +372,12 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
                 break;
             }
             case mydb::Request_REQUEST_TYPE_ABORT : {
+<<<<<<< HEAD
                 WorkerRequest *wr = new WorkerRequest(io_service_, MSG_ABORT_TRANSACTION, sessionId, PARTITIONS, "", nullptr);
+=======
+                cout<<"aborting"<<endl;
+                LongWorkerRequest *wr = new LongWorkerRequest(io_service_, MSG_ABORT_TRANSACTION, sessionId, PARTITIONS, request.key(), 0);
+>>>>>>> 59f9b43f45aac6daee0628924a8603a32b274a7d
                 for (size_t partition = 0; partition < PARTITIONS; partition++)
                 {
                     (*workers)[partition].PostMsg(wr);
@@ -377,7 +385,7 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
                 wr->acv.async_wait(boost::bind(&Session<long, s>::handle_status, this->shared_from_this(),
                                                boost::asio::placeholders::error, wr));
                 break;
-                break;
+
             }
             default : {
                 break;
@@ -389,8 +397,9 @@ void Session<long, s>::handle_socket_read(const boost::system::error_code &error
 
 
 template <size_t s>
-void Session<long, s>::handle_status(const boost::system::error_code &error, WorkerRequest *wr) {
-    bool status = (bool) wr->response;
+void Session<long, s>::handle_status(const boost::system::error_code &error, LongWorkerRequest *wr) {
+    cout<<"end "<<wr->type<<endl;
+    bool status = (bool) wr->error;
     mydb::Response response;
 
     response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
@@ -407,7 +416,8 @@ void Session<long, s>::handle_status(const boost::system::error_code &error, Wor
 }
 
 template <size_t s>
-void Session<long, s>::handle_read(const boost::system::error_code& error, WorkerRequest *wr) {
+void Session<long, s>::handle_read(const boost::system::error_code& error, LongWorkerRequest *wr) {
+    cout<<"read"<<endl;
     mydb::Response response;
     if (wr->error) {
         response.set_type(mydb::Response_RESPONSE_TYPE_STATUS);
@@ -424,14 +434,9 @@ void Session<long, s>::handle_read(const boost::system::error_code& error, Worke
     }
     else {
         response.set_type(mydb::Response_RESPONSE_TYPE_READ_LONG);
-
-        array<long, s> *ar = static_cast<array<long, s> *>(wr->response);
-        response.set_long_result(to_string((*ar)[0]));
-
+        response.set_long_result(to_string(wr->value));
         int size = response.ByteSize();
         response.SerializeToArray(output.c_array(), size);
-
-        delete ar;
         delete wr;
         boost::asio::async_write(
                 socket_,
@@ -499,6 +504,7 @@ void Session<long, s>::handle_validate_transaction(const boost::system::error_co
     {
         WorkerRequest *writewr = new WorkerRequest(io_service_, MSG_WRITE_TRANSACTION, sessionId, PARTITIONS, "",
                                                    &commit_ts);
+
         for (size_t partition = 0; partition < PARTITIONS; partition++)
         {
             cout<<"posting write"<<endl;

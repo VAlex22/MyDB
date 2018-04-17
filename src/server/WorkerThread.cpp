@@ -75,7 +75,7 @@ void WorkerThread<Text, s>::PostMsg(WorkerRequest* data)
 }
 
 template <size_t s>
-void WorkerThread<long, s>::PostMsg(WorkerRequest* data)
+void WorkerThread<long, s>::PostMsg(LongWorkerRequest* data)
 {
     std::unique_lock<std::mutex> lk(m_mutex);
     m_deque.push_back(data);
@@ -196,7 +196,7 @@ void WorkerThread<Text, s>::Process()
 template <size_t s>
 void WorkerThread<long, s>::Process() {
     while (1) {
-        WorkerRequest *msg;
+        LongWorkerRequest *msg;
         {
             // Wait for a message to be added to the queue
             std::unique_lock<std::mutex> lk(m_mutex);
@@ -227,27 +227,28 @@ void WorkerThread<long, s>::Process() {
 
                 case MSG_DELETE: {
                     bool status = p.remove(msg->key);
-                    msg->response = (void *) status;
+                    msg->error = status;
                     msg->acv.notify();
                     break;
                 }
 
                 case MSG_INSERT_LONG: {
-                    array<long, s> *ar = static_cast<array<long, s> *>(msg->data);
-                    bool status = p.insert(msg->key, *ar);
-                    delete ar;
-                    msg->response = (void *) status;
+                    array<long, s> ar;
+                    ar[0] = msg->value;
+                    msg->error = p.insert(msg->key, ar);
                     msg->acv.notify();
                     break;
                 }
 
                 case MSG_UPDATE_LONG: {
+
                     unordered_map<string, long> *newData = static_cast<unordered_map<string, long> *>(msg->data);
                     unordered_map<string, long> newData_ = *newData;
                     delete newData;
 
                     bool status = p.update(msg->key, newData_, msg->sessionId);
                     msg->response = (void *) status;
+
                     msg->acv.notify();
                     break;
                 }
@@ -278,6 +279,7 @@ void WorkerThread<long, s>::Process() {
                         delete locker;
                         throw er;
                     }
+
 
 
                     break;
@@ -319,6 +321,7 @@ void WorkerThread<long, s>::Process() {
                     break;
                 }
                 case MSG_WRITE_TRANSACTION: {
+
                     string ss = string("released write for session ") + to_string(msg->sessionId) + string(" ") +to_string(threadId);
                     cout << ss << endl;
                     unsigned *commitTimestamp = static_cast<unsigned *>(msg->data);
@@ -331,6 +334,7 @@ void WorkerThread<long, s>::Process() {
                     break;
                 }
                 case MSG_ABORT_TRANSACTION: {
+
                     string ss = string("released abort for session ") + to_string(msg->sessionId) + string(" ") +to_string(threadId);
                     cout << ss << endl;
                     unsigned ses = msg->sessionId;
@@ -339,6 +343,7 @@ void WorkerThread<long, s>::Process() {
                     msg->response = (void *) true;
 
                     postLockedMessages(msg->sessionId);
+
                     msg->acv.notify();
                     break;
                 }
@@ -377,6 +382,7 @@ void WorkerThread<long, s>::Process() {
                     break;
                 }
             }
+
         }
     }
 }
@@ -405,6 +411,21 @@ WorkerRequest::WorkerRequest(boost::asio::io_service &service, int type, unsigne
         acv(service, waiters), type(type), sessionId(sessionId), key(key), data(data), error(false)
 {
 }
+
+LongWorkerRequest::LongWorkerRequest(boost::asio::io_service &service, int type, unsigned sessionId, int waiters,
+                                     string key, long value) :
+        acv(service, waiters), type(type), sessionId(sessionId), key(key), value(value), error(false)
+{
+
+}
+
+LongWorkerRequest::LongWorkerRequest(boost::asio::io_service &service, int type, unsigned sessionId, int waiters,
+                                     unsigned cts):
+        acv(service, waiters), type(type), sessionId(sessionId), cts(cts), error(false)
+{
+
+}
+
 
 template class WorkerThread<Text, FIELDS>;
 template class WorkerThread<long, 1>;

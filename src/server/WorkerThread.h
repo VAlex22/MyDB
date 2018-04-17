@@ -12,13 +12,27 @@ struct WorkerRequest
     const atomic_int type;
     const atomic_int sessionId;
     string key;
+    void *data;
     AsyncConditionVariable acv;
     bool error=false;
-    void *data;
-
     void *response;
     array<unsigned, PARTITIONS> tsar;
 };
+
+struct LongWorkerRequest
+{
+    LongWorkerRequest(boost::asio::io_service & service, int type, unsigned sessionId, int waiters, string key, long value);
+    LongWorkerRequest(boost::asio::io_service & service, int type, unsigned sessionId, int waiters, unsigned cts);
+    AsyncConditionVariable acv;
+    int type;
+    unsigned sessionId;
+    string key;
+    long value;
+    unsigned cts;
+    bool error=false;
+    array<unsigned, PARTITIONS> tsar;
+};
+
 
 template <typename t, size_t s>
 class WorkerThread
@@ -26,7 +40,6 @@ class WorkerThread
 public:
     WorkerThread(unsigned threadId, unsigned partitionSize);
     ~WorkerThread();
-    void PostMsg(WorkerRequest* wr);
     Partition<t, s> p;
 
 private:
@@ -73,7 +86,7 @@ public:
     WorkerThread(unsigned threadId, unsigned partitionSize);
     WorkerThread(unsigned threadId, unsigned partitionSize, unordered_map<string, unsigned> fieldIndexes);
     ~WorkerThread();
-    void PostMsg(WorkerRequest* wr);
+    void PostMsg(LongWorkerRequest* wr);
     Partition<long, s> p;
     WorkerThread(const WorkerThread&);
     WorkerThread& operator=(const WorkerThread&);
@@ -84,6 +97,7 @@ private:
     uint64_t msgId;
     thread* m_thread;
     deque<WorkerRequest*> m_deque;
+
     mutex m_mutex;
     condition_variable m_cv;
     void postLockedMessages(unsigned session);

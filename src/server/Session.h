@@ -73,6 +73,7 @@ private:
     void handle_lock_transaction_set(const boost::system::error_code &error, WorkerRequest *wr);
     void handle_compute_transaction_timestamp(const boost::system::error_code &error, WorkerRequest *wr);
     void handle_validate_transaction(const boost::system::error_code &error, WorkerRequest *wr);
+
     boost::asio::io_service& io_service_;
     stream_protocol::socket socket_;
     boost::array<char, BUFFER_SIZE> input;
